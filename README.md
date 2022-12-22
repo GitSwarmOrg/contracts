@@ -1,1 +1,1 @@
-Solidity contracts used on the GitSwarm.com platform
+Solidity contracts used on the [GitSwarm.com](https://gitswarm.com/) platform
