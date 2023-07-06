@@ -1,11 +1,7 @@
 import logging
 import os.path
-import types
 from typing import Literal
-from unittest import TestCase
-from unittest.mock import patch, MagicMock, PropertyMock
 
-from django.http import HttpResponse
 from eth_account import Account
 from eth_utils import event_abi_to_log_topic, encode_hex
 from web3 import HTTPProvider
@@ -45,29 +41,8 @@ CONTRACTS_INDEX = {
     "Proposal": 4,
 }
 
-INDEX_CONTRACTS = {
-    0: "Token",
-    1: "Delegates",
-    2: "FundsManager",
-    3: "TokenSell",
-    4: "Proposal",
-}
-
 CONTRACT_NAMES = {v: k for k, v in CONTRACTS_INDEX.items()}
 
-UPGRADABLE_CONTRACTS = [
-    "Delegates",
-    "FundsManager",
-    "TokenSell",
-    "Proposal"
-]
-
-PROJECT_CONTRACTS = [
-    "Delegates",
-    "FundsManager",
-    "TokenSell",
-    "Proposal",
-    "ContractsManager"]
 
 PROPOSAL_TYPES = {
     1: TransactionProposal,
@@ -102,15 +77,6 @@ PROPOSAL_CONTRACT = {
 }
 
 LATEST_CONTRACTS_VERSION = '1.0.0'
-
-PAYROLL_GAS_COST = {1: 519953, 5: 879852, 10: 1348215, 15: 1816708, 20: 2285141}
-
-
-# Gas for 1 payment payroll: 519953
-#  Gas for 5 payments payroll: 879852
-#  Gas for 10 payments payroll: 1348215
-#  Gas for 15 payments payroll: 1816708
-#  Gas for 20 payments payroll: 2285141
 
 
 class Defaults:
@@ -289,9 +255,6 @@ class EthContract:
                                    str(e))) from exception if exception else e
 
 
-def send_eth_from_default_account(amount, address, unit='ether'):
-    send_eth(amount, address, INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY)
-
 
 def get_nonce_for_address(address):
     return WEB3.eth.get_transaction_count(address, 'pending')
@@ -343,30 +306,8 @@ def get_abi_for_contract_version(name, version, allow_cache=False):
     return get_abi_from_sol_file('contracts/prod/' + version + '/' + name + '.sol', allow_cache=allow_cache)
 
 
-def get_abi_for_event(name, contract):
-    for e in contract.contract_instance().abi:
-        if e['type'] == 'event' and e['name'] == name:
-            return e
-
-
-def decode_event_args(abi_event, data):
-    types = []
-    for a in abi_event['inputs']:
-        types.append(a['type'])
-
-    from eth_abi import decode
-    args_tuple = decode(types, bytes.fromhex(data[2:]))
-    args = {}
-    i = 0
-    for a in abi_event['inputs']:
-        args[a['name']] = args_tuple[i]
-        i += 1
-
-    return args
-
 
 compiled_files_cache = {}
-
 
 def send_deploy_contract_transaction(filename, *contract_constructor_args, private_key, allow_cache=False):
     contract = compile_contract(filename, allow_cache)
@@ -441,23 +382,6 @@ def deploy_test_contract(name, *contract_constructor_args, private_key, allow_ca
                                          *contract_constructor_args, private_key=private_key, allow_cache=allow_cache)
 
 
-def estimate_gas_for_deploying_contract(name, version, *contract_constructor_args):
-    if version == 'latest':
-        version = LATEST_CONTRACTS_VERSION
-    file = 'contracts/prod/' + version + '/' + name + '.sol'
-    compiled_file = optimized_compile_files([file])
-
-    key = ""
-    for k in compiled_file:
-        if file in k:
-            key = k
-            break
-
-    contract_ = WEB3.eth.contract(abi=compiled_file[key]['abi'],
-                                  bytecode=compiled_file[key]['bin'])
-
-    return contract_.constructor(*contract_constructor_args).estimate_gas()
-
 
 def deploy_contract_version_and_wait(name, version, *contract_constructor_args, private_key, allow_cache=False):
     return deploy_contract_file_and_wait(get_contract_file_path(name, version),
@@ -470,12 +394,6 @@ def get_contract_file_path(name, version):
     return 'contracts/prod/' + version + '/' + name + '.sol'
 
 
-def get_base_file_path(name, version):
-    if version == 'latest':
-        version = LATEST_CONTRACTS_VERSION
-    return 'contracts/prod/' + version + '/base/' + name + '.sol'
-
-
 VOTE_DURATION = 60
 EXPIRATION_PERIOD = 5 * 60
 BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL = 60
@@ -484,35 +402,6 @@ BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL = 60
 def increase_time(duration, http_provider: HTTPProvider = ETHEREUM_NODE):
     http_provider.make_request("evm_increaseTime", [hex(duration)])
 
-
-class TransactionFailedException(Exception):
-    pass
-
-
-def tx_info(tx_hash, throw_on_error=True):
-    try:
-        receipt = WEB3.eth.get_transaction_receipt(tx_hash)
-    except Exception as e:
-        if throw_on_error:
-            raise e
-        else:
-            return AttrDict({'error': str(e)})
-
-    if not receipt:
-        return None
-
-    cost = receipt.gasUsed * WEB3.eth.get_transaction(tx_hash).gasPrice
-
-    if throw_on_error and receipt.status != 1:
-        raise TransactionFailedException("Transaction failed tx: %s" % tx_hash)
-
-    return AttrDict({'tx_hash': tx_hash,
-                     'cost': cost,
-                     'gasUsed': receipt.gasUsed,
-                     'logs': [AttrDict(rl) for rl in receipt.logs],
-                     'status': receipt.status,
-                     'contractAddress': receipt.contractAddress,
-                     'from': receipt['from']})
 
 
 from web3._utils.events import get_event_data
@@ -643,102 +532,3 @@ def initial_deploy_gs_contracts(token_name, token_symbol, fm_supply, token_buffe
 
 GS_PROJECT_ID = 0
 
-
-class PatchMixin:
-    """
-    Testing utility mixin that provides methods to patch objects so that they
-    will get unpatched automatically.
-    """
-
-    # noinspection PyUnresolvedReferences
-    def patch(self, *args, **kwargs):
-        patcher = patch(*args, **kwargs)
-        self.addCleanup(patcher.stop)
-        return patcher.start()
-
-    # noinspection PyUnresolvedReferences
-    def patch_object(self, *args, **kwargs):
-        patcher = patch.object(*args, **kwargs)
-        self.addCleanup(patcher.stop)
-        return patcher.start()
-
-    # noinspection PyUnresolvedReferences
-    def patch_dict(self, *args, **kwargs):
-        patcher = patch.dict(*args, **kwargs)
-        self.addCleanup(patcher.stop)
-        return patcher.start()
-
-    list_id = 0
-
-    def mock_add_list(self, *args, **kwargs):
-        self.list_id += 111
-        return MagicMock(id=str(self.list_id))
-
-    # noinspection PyAttributeOutsideInit
-    def patch_trello_objects(self):
-        self.list_id = 0
-        self.patch('api.webhooks.WebhookHelper.create_trello_webhook',
-                   return_value=HttpResponse(content=b"Webhook - Patched"))
-        self.patch('core.models.workflow.trello.trello_webhooks_mixin.TrelloWebhooksMixin.create_webhook')
-
-        self.board_mock = MagicMock(**{'add_list.side_effect': self.mock_add_list,
-                                       'id': "BOARD_ID",
-                                       'url': "https://trello.com/b/SHORT_ID/BOARD_NAME",
-                                       'name': "BOARD_NAME"})
-
-        # 'name' cannot be mocked like other attributes because it's used by MagickMock
-        type(self.board_mock).name = PropertyMock(return_value="BOARD_NAME")
-        self.trello_lane = MagicMock(id="111")
-        self.card_mock = MagicMock(url='http://trello_mock_card.com',
-                                   **{'get_list.return_value': self.trello_lane,
-                                      'id': "CARD_ID",
-                                      '__getattribute__': MagicMock(return_value="attr_value")})
-
-        # hack to mock name attribute on card_mock;
-        # 'name' cannot be mocked like other attributes because it's used by MagickMock
-        p = PropertyMock(return_value='Mock Card Name')
-        type(self.card_mock).name = p
-
-        self.board_mock.add_list = MagicMock(side_effect=self.mock_add_list)
-        self.card_mock.get_list = MagicMock(return_value=self.trello_lane)
-        self.mock_trello.return_value = MagicMock(
-            **{'get_board.return_value': self.board_mock,
-               'get_card.return_value': self.card_mock,
-               'add_board.return_value': self.board_mock})
-
-    # noinspection PyAttributeOutsideInit
-    def patch_github(self):
-        self.mock_github = self.patch('core.utils.GithubClientUtil.github_client')
-
-        self.mock_repo = MagicMock(id='123', full_name='Gitswarm/Repo')
-        self.mock_issue = MagicMock(title="Mock Issue Title", html_url="http://github_mock_issue.com",
-                                    body="mock issue body")
-        self.mock_pull = MagicMock(state='open', mergeable=True)
-
-        self.mock_github.return_value.get_repo.return_value = self.mock_repo
-        self.mock_repo.get_issue.return_value = self.mock_issue
-        self.mock_repo.get_pull.return_value = self.mock_pull
-
-        self.mock_github.return_value.get_user.return_value.create_fork.return_value = self.mock_repo
-
-
-class Method:
-    def __init__(self, method):
-        if not isinstance(method, types.MethodType):
-            raise ValueError('param "method" must be of type types.MethodType')
-        self.method = method
-
-    def __eq__(self, other):
-        if isinstance(other, Method):
-            return self.method == other
-        if type(other) != type(self.method):
-            return False
-        # noinspection PyUnresolvedReferences
-        return self.method.__self__ == other.__self__ and self.method.__code__.co_name == other.__code__.co_name
-
-    def __repr__(self):
-        return str(self.method)
-
-
-class GsTestCase(TestCase):
-    pass

@@ -1,10 +1,12 @@
+from unittest import TestCase
+
 from contract_proposals_data_structs import Proposals, ChangeTrustedAddressProposal
-from utils import increase_time, VOTE_DURATION, WEB3, CONTRACTS_INDEX, deploy_contract_version_and_wait, \
-    EthContract, send_eth, EXPIRATION_PERIOD, deploy_contract_file_and_wait, deploy_proxy_contract, ZERO_ETH_ADDRESS, \
-    initial_deploy_gs_contracts, GS_PROJECT_ID, PatchMixin, GsTestCase, INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY
+from utils import increase_time, VOTE_DURATION, WEB3, CONTRACTS_INDEX, EthContract, send_eth, EXPIRATION_PERIOD, \
+    deploy_contract_file_and_wait, ZERO_ETH_ADDRESS, \
+    initial_deploy_gs_contracts, GS_PROJECT_ID, INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY
 
 
-class EthBaseTest(PatchMixin, GsTestCase):
+class EthBaseTest(TestCase):
     token_buffer_amount = 10 ** 20
     fm_supply = 10 ** 20
 
