@@ -132,9 +132,11 @@ contract FundsManager is Common, Initializable, IFundsManager {
             emit ProposalTransfer(projectId, tokenAddress[i], to, amount[i], proposalId);
             if (to == address(0x0)) {
                 if (tokenAddress[i] == address(0x0)) {
+                    require(amount[i] <= balances[projectId][address(0x0)], "Not enough balance");
                     balances[projectId][address(0x0)] -= amount[i];
                     balances[depositToProjectId[i]][address(0x0)] += amount[i];
                 } else {
+                    require(amount[i] <= balances[projectId][tokenAddress[i]], "Not enough balance");
                     balances[projectId][tokenAddress[i]] -= amount[i];
                     balances[depositToProjectId[i]][tokenAddress[i]] += amount[i];
                 }
@@ -148,6 +150,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
                     }
                 } else {
                     ERC20interface erc20Contract = ERC20interface(tokenAddress[i]);
+                    require(amount[i] <= balances[projectId][tokenAddress[i]], "Not enough balance");
                     balances[projectId][tokenAddress[i]] -= amount[i];
                     require(erc20Contract.transfer(to, amount[i]), "Token transfer failed");
                 }
@@ -157,7 +160,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
 
     function reclaimFunds(uint projectId, uint votingTokenAmount, address[] memory tokenContractsAddresses) external {
         ERC20interface votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
-        require(votingTokenContract.allowance(msg.sender, payable(address(this))) >= votingTokenAmount && votingTokenAmount <= votingTokenContract.balanceOf(msg.sender));
+        require(votingTokenContract.allowance(msg.sender, payable(address(this))) >= votingTokenAmount && votingTokenAmount <= votingTokenContract.balanceOf(msg.sender), 'No allowance or not enough voting tokens');
         uint percentage = votingTokenAmount * PERCENTAGE_MULTIPLIER / contractsManagerContract.votingTokenCirculatingSupply(projectId);
         uint tokenAmount;
         uint[] memory sentTokenAmounts = new uint[](tokenContractsAddresses.length);
