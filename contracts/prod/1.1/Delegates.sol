@@ -19,6 +19,10 @@ contract Delegates is Common, Initializable, IDelegates {
         _;
     }
 
+    event DelegationEvent(address delegator, address delegate);
+    event UndelegationEvent(address delegator, address delegate);
+    event UndelegateAllFromSelfEvent(address sender);
+
     function initialize(
         address _delegates,
         address _fundsManager,
@@ -77,6 +81,7 @@ contract Delegates is Common, Initializable, IDelegates {
 
         delegations[projectId][delegatedAddr].push(msg.sender);
         delegateOf[projectId][msg.sender] = delegatedAddr;
+        emit DelegationEvent(msg.sender, delegatedAddr);
     }
 
     function undelegate(uint projectId) public {
@@ -93,6 +98,7 @@ contract Delegates is Common, Initializable, IDelegates {
                 break;
             }
         }
+        emit UndelegationEvent(addr, delegateOf[projectId][addr]);
         delete delegateOf[projectId][addr];
     }
 
@@ -101,12 +107,12 @@ contract Delegates is Common, Initializable, IDelegates {
             delete delegateOf[projectId][delegations[projectId][msg.sender][i - 1]];
             delegations[projectId][msg.sender].pop();
         }
+        emit UndelegateAllFromSelfEvent(msg.sender);
     }
 
     function removeSpamDelegates(uint projectId, address[] memory addresses, uint[] memory indexes) external {
         uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
                             proposalContract.parameters(projectId, keccak256("MaxNrOfDelegators"));
-
         for (uint ii = addresses.length; ii > 0; ii--) {
             uint i = ii - 1;
             if (!checkVotingPower(projectId, addresses[i], minimum_amount)) {
@@ -114,6 +120,7 @@ contract Delegates is Common, Initializable, IDelegates {
                 require(addresses[i] == current_delegates[indexes[i]], "Wrong index for address.");
                 current_delegates[indexes[i]] = current_delegates[current_delegates.length - 1];
                 current_delegates.pop();
+                emit UndelegationEvent(addresses[i], delegateOf[projectId][addresses[i]]);
                 delete delegateOf[projectId][addresses[i]];
             }
         }

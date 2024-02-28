@@ -45,6 +45,11 @@ contract Proposal is Common, Initializable, IProposal {
     event ExecuteProposal(uint projectId, uint proposalId);
     event VoteOnProposal(uint projectId, uint proposalId, address userAddress, bool vote);
     event ContestedProposal(uint projectId, uint proposalId, uint yesVotes, uint noVotes);
+    event ProposalSetActive(uint projectId, uint proposalId, bool value);
+    event ProposalSetWillExecute(uint projectId, uint proposalId, bool value);
+    event ProposalDeleted(uint projectId, uint proposalId);
+    event RemovedSpamVoters(uint projectId, uint proposalId, uint[] indexes);
+    event GitSwarmAddressRemoved(address who);
 
     function initialize(
         address _gitswarmAddress,
@@ -62,21 +67,27 @@ contract Proposal is Common, Initializable, IProposal {
     }
 
     function initializeParameterMinMax() internal {
+        // Proposal voting duration
         parameterMinValues[keccak256("VoteDuration")] = 60 seconds;
         parameterMaxValues[keccak256("VoteDuration")] = 30 days;
 
-        parameterMinValues[keccak256("MaxNrOfDelegators")] = 10;
-        parameterMaxValues[keccak256("MaxNrOfDelegators")] = 10000;
-
+        // For how long a proposal can be contested after the voting stage
         parameterMinValues[keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 60 seconds;
         parameterMaxValues[keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 30 days;
 
+        // Minimum percentage of the project's token required to make a new proposal is 100/MaxNrOfDelegators
+        parameterMinValues[keccak256("MaxNrOfDelegators")] = 10;
+        parameterMaxValues[keccak256("MaxNrOfDelegators")] = 10000;
+
+        // Percentage of yes votes required for a create-more-tokens proposal to pass
         parameterMinValues[keccak256("RequiredVotingPowerPercentageToCreateTokens")] = 50;
         parameterMaxValues[keccak256("RequiredVotingPowerPercentageToCreateTokens")] = 100;
 
+        // Percentage of the project's token amount necessary to veto any proposal
         parameterMinValues[keccak256("VetoMinimumPercentage")] = 25;
         parameterMaxValues[keccak256("VetoMinimumPercentage")] = 50;
 
+        // Maximum period in which a proposal can be executed
         parameterMinValues[keccak256("ExpirationPeriod")] = 60 seconds;
         parameterMaxValues[keccak256("ExpirationPeriod")] = 30 days;
 
@@ -105,10 +116,12 @@ contract Proposal is Common, Initializable, IProposal {
 
     function setActive(uint projectId, uint proposalId, bool value) external restricted(projectId) {
         proposals[projectId][proposalId].votingAllowed = value;
+        emit ProposalSetActive(projectId, proposalId, value);
     }
 
     function setWillExecute(uint projectId, uint proposalId, bool value) external restricted(projectId) {
         proposals[projectId][proposalId].willExecute = value;
+        emit ProposalSetWillExecute(projectId, proposalId, value);
     }
 
     function hasVotedAlready(uint projectId, uint proposalId, address addr) public view returns (bool) {
@@ -136,6 +149,7 @@ contract Proposal is Common, Initializable, IProposal {
 
     function deleteProposal(uint projectId, uint proposalId) external restricted(projectId) {
         delete proposals[projectId][proposalId];
+        emit ProposalDeleted(projectId, proposalId);
     }
 
     function contestProposal(uint projectId, uint proposalId, bool doRecount) external hasMinBalance(projectId, msg.sender) returns (bool) {
@@ -195,11 +209,13 @@ contract Proposal is Common, Initializable, IProposal {
         return indexes;
     }
 
+    // Removes votes that no longer meet the minimum voting power requirement. This might be necessary for projects with a high MaxNrOfDelegators.
     function removeSpamVoters(uint projectId, uint proposalId, uint[] memory indexes) external {
         uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) / parameters[projectId][keccak256("MaxNrOfDelegators")];
+        emit RemovedSpamVoters(projectId, proposalId, indexes);
         for (uint64 index = uint64(indexes.length); index > 0; index--) {
-            //avoiding underflow when decrementing, that would have happened for value 0
-            uint64 i = index - 1;
+            // avoiding underflow when decrementing, that would have happened for value 0
+            uint64 i = uint64(indexes[index - 1]);
             ProposalData storage p = proposals[projectId][proposalId];
             if (!delegatesContract.checkVotingPower(projectId, p.voters[i], minimum_amount)) {
                 p.nrOfVoters--;
@@ -227,7 +243,6 @@ contract Proposal is Common, Initializable, IProposal {
         newProposal.endTime = block.timestamp + parameters[projectId][keccak256("VoteDuration")];
 
         nextProposalId[projectId]++;
-//        console.log('new proposal by %s with %s v-power', voterAddress, votingPower(projectId, voterAddress));
         emit NewProposal(projectId, nextProposalId[projectId] - 1, proposalType);
     }
 
@@ -339,5 +354,6 @@ contract Proposal is Common, Initializable, IProposal {
     function removeGitSwarmAddress() public {
         require(msg.sender == gitswarmAddress);
         gitswarmAddress = address(0);
+        emit GitSwarmAddressRemoved(msg.sender);
     }
 }

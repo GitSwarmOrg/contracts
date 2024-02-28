@@ -29,6 +29,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
     event ChangeTrustedAddress(uint projectId, uint proposalId, uint32 contractIndex, address trustedAddress);
     event ContractsUpgraded(uint projectId, uint proposalId);
     event ChangeVotingTokenAddress(uint projectId, uint proposalId, address tokenAddress);
+    event AddBurnAddress(address burnAddress);
 
     struct UpgradeContractsProposal {
         address delegates;
@@ -221,6 +222,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
                 }
             }
 
+            emit AddBurnAddress(newBurnAddress);
             burnAddresses[projectId].push(newBurnAddress);
             proposalContract.deleteProposal(projectId, proposalId);
             delete addBurnAddressProposals[projectId][proposalId];

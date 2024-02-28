@@ -20,5 +20,6 @@ interface ERC20interface {
     function symbol() external view returns (string memory);
 
     event Transfer(address indexed _from, address indexed _to, uint _value);
+    event TransferredFrom(address indexed _from, address indexed _to, uint _value);
     event Approval(address indexed _owner, address indexed _spender, uint _value);
 }

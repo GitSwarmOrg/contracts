@@ -23,6 +23,8 @@ contract GitSwarmToken is ERC20interface, Common, Initializable {
     }
 
     event ExecuteProposal(uint projectId, uint proposalId);
+    event InitialTokensCreated(uint supply, uint creatorSupply);
+    event TokensCreated(uint value);
 
     function initialize(
         string memory tokenName,
@@ -51,6 +53,7 @@ contract GitSwarmToken is ERC20interface, Common, Initializable {
         __balanceOf[msg.sender] = creatorSupply;
         __balanceOf[address(fundsManagerContract)] = supply;
         fundsManagerContract.updateBalance(projectId, address(this), supply);
+        emit InitialTokensCreated(supply, creatorSupply);
     }
 
     function decimals() override external pure returns (uint dec) {
@@ -81,6 +84,7 @@ contract GitSwarmToken is ERC20interface, Common, Initializable {
         __balanceOf[_from] -= _value;
         __balanceOf[_to] += _value;
         __allowances[_from][msg.sender] -= _value;
+        emit TransferredFrom(_from, _to, _value);
         return true;
     }
 
@@ -98,6 +102,7 @@ contract GitSwarmToken is ERC20interface, Common, Initializable {
         __totalSupply += value;
         __balanceOf[address(fundsManagerContract)] += value;
         fundsManagerContract.updateBalance(projectId, address(this), value);
+        emit TokensCreated(value);
         return true;
     }
 

@@ -26,6 +26,10 @@ contract FundsManager is Common, Initializable, IFundsManager {
     event Transfer(uint projectId, address tokenContractAddress, address recipient, uint amount);
     event DepositToken(address tokenAddress, uint projectId, uint amount);
     event DestroyToken(uint projectId, uint destroyedTokenAmount, uint ethAmount, address[] sentTokenAddresses, uint[] sentTokenAmounts, address accountAddress);
+    event OrphanTokensSent(uint amount);
+    event TokensSent(uint projectId, address tokenAddress, address receiver, uint amount);
+    event EthSent(uint projectId, address receiver, uint amount);
+    event BalanceUpdated(uint projectId, address tokenAddress, uint amount);
 
     receive() external payable {
         revert("You cannot send Ether directly to FundsManager");
@@ -55,6 +59,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
         for (uint i = 0; i < nbOfProjects; i++) {
             amount += balances[i][tokenAddress];
         }
+        emit OrphanTokensSent(amount);
         balances[0][tokenAddress] += (tokenContract.balanceOf(address(this)) - amount);
     }
 
@@ -186,15 +191,18 @@ contract FundsManager is Common, Initializable, IFundsManager {
         balances[projectId][tokenAddress] -= amount;
         ERC20interface tokenContract = ERC20interface(tokenAddress);
         require(tokenContract.transfer(receiver, amount), "Token transfer failed");
+        emit TokensSent(projectId, tokenAddress, receiver, amount);
     }
 
     function sendEther(uint projectId, address payable receiver, uint amount) external restricted(projectId) {
         require(amount <= balances[projectId][address(0)], "Not enough Ether on FundsManager");
         balances[projectId][address(0)] -= amount;
         receiver.transfer(amount);
+        emit EthSent(projectId, receiver, amount);
     }
 
     function updateBalance(uint projectId, address tokenAddress, uint amount) external restricted(projectId) {
         balances[projectId][tokenAddress] += amount;
+        emit BalanceUpdated(projectId, tokenAddress, amount);
     }
 }

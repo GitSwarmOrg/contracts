@@ -18,6 +18,7 @@ contract Token is ERC20interface, Common {
     uint immutable public projectId;
 
     event ExecuteProposal(uint projectId, uint proposalId);
+    event TokensCreated(uint value);
 
     struct CreateTokensProposal {
         uint amount;
@@ -73,6 +74,7 @@ contract Token is ERC20interface, Common {
         __balanceOf[_from] -= _value;
         __balanceOf[_to] += _value;
         __allowances[_from][msg.sender] -= _value;
+        emit TransferredFrom(_from, _to, _value);
         return true;
     }
 
@@ -90,6 +92,7 @@ contract Token is ERC20interface, Common {
         __totalSupply += value;
         __balanceOf[address(fundsManagerContract)] += value;
         fundsManagerContract.updateBalance(projectId, address(this), value);
+        emit TokensCreated(value);
         return true;
     }
 
