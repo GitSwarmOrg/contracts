@@ -47,6 +47,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
         _init(_delegates, _fundsManager, _tokenSell, _proposal, _gasStation, _contractsManager);
     }
 
+    //adds all unretrievable tokens to the GitSwarm project balance
     function sendOrphanTokensToGitSwarm(address tokenAddress) external {
         ERC20interface tokenContract = ERC20interface(tokenAddress);
         uint amount;

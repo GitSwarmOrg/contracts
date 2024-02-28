@@ -13,6 +13,8 @@ import "../../openzeppelin-v5.0.1/proxy/transparent/ProxyAdmin.sol";
 contract ContractsManager is Common, Initializable, IContractsManager {
 
     mapping(uint => ERC20interface) public votingTokenContracts;
+    // Trusted addresses per project, may include other contracts or external addresses.
+    // They can call any restricted methods and enables them to send funds without proposals:
     mapping(uint => address[]) public trustedAddresses;
     mapping(uint => mapping(uint => address)) public changeVotingTokenProposals;
     mapping(uint => mapping(uint => ChangeTrustedAddressProposal)) public changeTrustedAddressProposals;
@@ -83,6 +85,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
         return delegatesContract.checkVotingPower(projectId, addr, required_amount);
     }
 
+    // minimum required amount for voting on/creating a proposal
     function minimumRequiredAmount(uint projectId) public view returns (uint) {
         return votingTokenCirculatingSupply(projectId) /
             proposalContract.parameters(projectId, keccak256("MaxNrOfDelegators"));
