@@ -12,14 +12,12 @@ from web3 import HTTPProvider
 from web3.exceptions import InvalidAddress, BadFunctionCallOutput
 
 from contract_proposals_data_structs import *
-from libs.solcx import compile_files
 
 log = logging.getLogger(__name__)
 
 ETHEREUM_NODE_ADDRESS = "http://localhost:8545"
 MAX_GAS_LIMIT = 8000000
 
-# Hardhat key for Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
 INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 GITSWARM_ACCOUNT_ADDRESS = '0x0634D869e44cB96215bE5251fE9dE0AEE10a52Ce'
 
@@ -434,11 +432,6 @@ def send_deploy_contract_transaction(filename, *contract_constructor_args, priva
     return WEB3.eth.send_raw_transaction(signed_txn.rawTransaction), contract
 
 
-def optimized_compile_files(*args, **kwargs):
-    return compile_files(*args, **kwargs, optimize=True, optimize_runs=2 ** 32 - 1,
-                         allow_paths=os.path.join(BASE_DIR, 'eth', 'contracts'))
-
-
 def compile_contract(filename, allow_cache=False):
     used_cache = False
     base_name = os.path.splitext(os.path.basename(filename))[0]
@@ -485,23 +478,6 @@ def deploy_test_contract(name, *contract_constructor_args, private_key, allow_ca
     return deploy_contract_file_and_wait('contracts/test/' + name + '.sol',
                                          *contract_constructor_args, private_key=private_key, allow_cache=allow_cache)
 
-
-def estimate_gas_for_deploying_contract(name, version, *contract_constructor_args):
-    if version == 'latest':
-        version = LATEST_CONTRACTS_VERSION
-    file = 'contracts/prod/' + version + '/' + name + '.sol'
-    compiled_file = optimized_compile_files([file])
-
-    key = ""
-    for k in compiled_file:
-        if file in k:
-            key = k
-            break
-
-    contract_ = WEB3.eth.contract(abi=compiled_file[key]['abi'],
-                                  bytecode=compiled_file[key]['bin'])
-
-    return contract_.constructor(*contract_constructor_args).estimate_gas()
 
 
 def deploy_contract_version_and_wait(name, version, *contract_constructor_args, private_key, allow_cache=False):
