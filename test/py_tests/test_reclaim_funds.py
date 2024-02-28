@@ -30,8 +30,8 @@ class ReclaimFundsTests(EthBaseTest):
                                                                                             private_key=self.private_key,
                                                                                             allow_cache=True)
 
-        self.create_test_account(token_contract=self.tokenContract)
-        self.create_test_account(token_contract=self.tokenContract, token_amount=75 * self.DECIMALS)
+        self.create_test_account()
+        self.create_test_account(token_amount=75 * self.DECIMALS)
 
     def test_reclaim_funds(self):
         self.neptune_token_contract.approve(self.fundsManagerContract.address, 100 * self.DECIMALS,
@@ -76,15 +76,16 @@ class ReclaimFundsTests(EthBaseTest):
 
         eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
 
-        tokenContractsAddresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
-
+        token_contracts_addresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
+        self.tokenContract.approve(self.fundsManagerContract.address, 20000 * self.DECIMALS,
+                                   private_key=self.accounts[1].key)
         funds_manager_balance = self.tokenContract.balanceOf(self.fundsManagerContract.address)
         try:
-            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, tokenContractsAddresses,
+            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, token_contracts_addresses,
                                                    private_key=self.accounts[1].key)
             self.fail()
         except Exception as e:
-            self.assertIn("No allowance or not enough voting tokens", str(e))
+            self.assertIn("insufficient balance", str(e))
 
         self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
@@ -105,7 +106,7 @@ class ReclaimFundsTests(EthBaseTest):
                                                    private_key=self.accounts[1].key)
             self.fail()
         except Exception as e:
-            self.assertIn("No allowance or not enough voting tokens", str(e))
+            self.assertIn("insufficient allowance", str(e))
 
         self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
@@ -131,7 +132,7 @@ class ReclaimFundsTests(EthBaseTest):
                                                    private_key=self.accounts[1].key)
             self.fail()
         except Exception as e:
-            self.assertIn("No allowance or not enough voting tokens", str(e))
+            self.assertIn("insufficient allowance", str(e))
 
         self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
@@ -154,14 +155,14 @@ class ReclaimFundsTests(EthBaseTest):
         eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
         funds_manager_balance = self.tokenContract.balanceOf(self.fundsManagerContract.address)
 
-        tokenContractsAddresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
+        token_contracts_addresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
 
         try:
-            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, tokenContractsAddresses,
+            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, token_contracts_addresses,
                                                    private_key=self.accounts[1].key)
             self.fail()
         except Exception as e:
-            self.assertIn("No allowance or not enough voting tokens", str(e))
+            self.assertIn("insufficient balance", str(e))
 
         self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)

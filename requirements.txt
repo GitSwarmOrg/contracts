@@ -4,5 +4,5 @@ eth_utils==2.1.0
 Requests==2.31.0
 semantic_version==2.10.0
 tqdm==4.65.0
-web3==6.0.0
+web3==6.11.1
 pytest==7.4.0

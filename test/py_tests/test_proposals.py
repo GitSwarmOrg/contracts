@@ -1,6 +1,6 @@
 from web3 import Web3
 
-from contract_proposals_data_structs import Proposals, ChangeParameterProposal, TokenSellProposal, \
+from contract_proposals_data_structs import Proposals, ChangeParameterProposal, \
     AuctionSellProposal, \
     ChangeTrustedAddressProposal, CreateTokensProposal, AddBurnAddressProposal
 from test.py_tests.tests import EthBaseTest
@@ -12,10 +12,10 @@ class ProposalsTests(EthBaseTest):
 
     def setUp(self):
         super().setUp()
-        self.create_test_account(token_contract=self.tokenContract)
-        self.create_test_account(token_contract=self.tokenContract)
-        self.create_test_account(token_contract=self.tokenContract)
-        self.create_test_account(token_contract=self.tokenContract)
+        self.create_test_account()
+        self.create_test_account()
+        self.create_test_account()
+        self.create_test_account()
 
     @staticmethod
     def get_event(receipt, contract, event_name):
@@ -32,38 +32,10 @@ class ProposalsTests(EthBaseTest):
 
         self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
 
-        tx = self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                                  private_key=self.accounts[0].key)
+        tx = self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                        private_key=self.accounts[0].key)
 
         self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
-        increase_time(VOTE_DURATION + 15)
-
-        self.assertTrue(proposal_id < self.proposalContract.nextProposalId(GS_PROJECT_ID))
-        proposal = Proposals(self.proposalContract, 0, proposal_id)
-        self.assertTrue(proposal.votingAllowed)
-
-        balanceBefore = self.tokenContract.balanceOf(self.accounts[1].address)
-        tx = self.fundsManagerContract.processProposal(proposal_id,
-                                                       private_key=self.accounts[0].key,
-                                                       contract_project_id=GS_PROJECT_ID)
-
-        self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
-
-        self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), balanceBefore + 100)
-
-    def test_propose_token_transaction_and_vote_with_amount(self):
-        proposal_id = self.proposalContract.nextProposalId(GS_PROJECT_ID)
-        self.fundsManagerContract.proposeTransaction(GS_PROJECT_ID, [self.tokenContract.address], [100],
-                                                     [self.accounts[1].address], [0],
-                                                     private_key=self.accounts[0].key)
-
-        self.proposalContract.voteWithAmount(GS_PROJECT_ID, proposal_id, 300, 100,
-                                             private_key=self.accounts[0].key)
-        self.proposalContract.voteWithAmount(GS_PROJECT_ID, proposal_id, 500, 700,
-                                             private_key=self.accounts[1].key)
-        self.proposalContract.voteWithAmount(GS_PROJECT_ID, proposal_id, 200, 100,
-                                             private_key=self.accounts[2].key)
-
         increase_time(VOTE_DURATION + 15)
 
         self.assertTrue(proposal_id < self.proposalContract.nextProposalId(GS_PROJECT_ID))
@@ -73,7 +45,10 @@ class ProposalsTests(EthBaseTest):
         balanceBefore = self.tokenContract.balanceOf(self.accounts[1].address)
         self.fundsManagerContract.processProposal(proposal_id,
                                                   private_key=self.accounts[0].key,
+                                                  expect_to_execute=True,
                                                   contract_project_id=GS_PROJECT_ID)
+
+        self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
 
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), balanceBefore + 100)
 
@@ -83,8 +58,8 @@ class ProposalsTests(EthBaseTest):
                                                      [self.accounts[1].address], [0],
                                                      private_key=self.accounts[0].key)
 
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[1].key)
         try:
             self.fundsManagerContract.processProposal(proposal_id,
                                                       private_key=self.accounts[0].key,
@@ -99,8 +74,8 @@ class ProposalsTests(EthBaseTest):
                                                      [self.accounts[1].address], [0],
                                                      private_key=self.accounts[0].key)
 
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[1].key)
         increase_time(VOTE_DURATION + 15)
         self.fundsManagerContract.processProposal(proposal_id,
                                                   private_key=self.accounts[0].key,
@@ -121,8 +96,8 @@ class ProposalsTests(EthBaseTest):
                                                      [self.accounts[1].address], [0],
                                                      private_key=self.accounts[0].key)
 
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[1].key)
 
         increase_time(VOTE_DURATION + 15)
         try:
@@ -131,7 +106,7 @@ class ProposalsTests(EthBaseTest):
                                                       contract_project_id=GS_PROJECT_ID)
             self.fail()
         except Exception as e:
-            self.assertIn("Not enough balance", str(e))
+            self.assertIn("Arithmetic operation overflowed outside of an unchecked block", str(e))
 
     def test_propose_token_transaction_for_other_token_than_voting_token(self):
         self.tokenSaturnContract, self.tokenTxHash = deploy_contract_version_and_wait('Token', 'latest',
@@ -142,16 +117,15 @@ class ProposalsTests(EthBaseTest):
                                                                                       self.fundsManagerContract.address,
                                                                                       self.proposalContract.address,
                                                                                       'Saturn', 'ST',
-                                                                                      private_key=self.accounts[
-                                                                                          0].key,
+                                                                                      private_key=self.accounts[0].key,
                                                                                       allow_cache=True)
         project_id = 1
         proposal_id = 0
         self.fundsManagerContract.proposeTransaction(project_id, [self.tokenSaturnContract.address], [100],
                                                      [self.accounts[1].address], [0],
                                                      private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(project_id, proposal_id, True,
-                                             private_key=self.accounts[0].key)
+        self.proposalContract.vote(project_id, proposal_id, True,
+                                   private_key=self.accounts[0].key)
         increase_time(VOTE_DURATION + 15)
 
         self.fundsManagerContract.processProposal(proposal_id,
@@ -162,18 +136,19 @@ class ProposalsTests(EthBaseTest):
 
     def test_propose_eth_transaction(self):
         self.fundsManagerContract.depositEth(GS_PROJECT_ID, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
-                                             wei=0.0005 * 10 ** 18)
+                                             wei=int(0.0005 * 10 ** 18))
 
         proposal_id = self.proposalContract.nextProposalId(GS_PROJECT_ID)
         self.fundsManagerContract.proposeTransaction(GS_PROJECT_ID, [ZERO_ETH_ADDRESS], [100],
                                                      [self.accounts[1].address], [0],
                                                      private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[0].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[0].key)
         eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
         increase_time(VOTE_DURATION + 15)
         self.fundsManagerContract.processProposal(proposal_id,
-                                                  private_key=self.accounts[0].key,
+                                                  private_key=self.private_key,
+                                                  expect_to_execute=True,
                                                   contract_project_id=GS_PROJECT_ID)
 
         self.assertEqual(WEB3.eth.get_balance(self.accounts[1].address), eth_balance_before + 100)
@@ -183,8 +158,8 @@ class ProposalsTests(EthBaseTest):
         create_amount = 1000 * 10 ** 18
         self.tokenContract.proposeCreateTokens(create_amount, private_key=self.accounts[0].key)
 
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[1].key)
         total_supply_before = self.tokenContract.totalSupply()
         fm_balance_before = self.tokenContract.balanceOf(self.fundsManagerContract.address)
 
@@ -206,8 +181,8 @@ class ProposalsTests(EthBaseTest):
         self.proposalContract.proposeParameterChange(GS_PROJECT_ID, Web3.keccak(text="VoteDuration"), 86400,
                                                      private_key=self.accounts[0].key)
 
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[0].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[0].key)
         increase_time(VOTE_DURATION + 15)
 
         self.assertTrue(proposal_id < self.proposalContract.nextProposalId(GS_PROJECT_ID))
@@ -220,7 +195,7 @@ class ProposalsTests(EthBaseTest):
         self.proposalContract.processProposal(proposal_id,
                                               private_key=self.accounts[0].key,
                                               contract_project_id=GS_PROJECT_ID)
-        self.assertEqual(self.proposalContract.parameters(GS_PROJECT_ID, WEB3.keccak(text="VoteDuration"))[0], 86400)
+        self.assertEqual(self.proposalContract.parameters(GS_PROJECT_ID, WEB3.keccak(text="VoteDuration")), 86400)
 
     def test_propose_auction_token_sell(self):
         auction_token_sell_proposal_id = self.proposalContract.nextProposalId(GS_PROJECT_ID)
@@ -230,8 +205,8 @@ class ProposalsTests(EthBaseTest):
         self.tokenSellContract.proposeAuctionTokenSell(GS_PROJECT_ID, self.tokenContract.address, 10 ** 20, 0,
                                                        start_time, end_time,
                                                        private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, auction_token_sell_proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, auction_token_sell_proposal_id, True,
+                                   private_key=self.accounts[1].key)
 
         increase_time(VOTE_DURATION + 15)
         proposal = Proposals(self.proposalContract, 0, auction_token_sell_proposal_id)
@@ -282,8 +257,8 @@ class ProposalsTests(EthBaseTest):
         self.tokenSellContract.proposeAuctionTokenSell(GS_PROJECT_ID, self.tokenContract.address, 10 ** 20, 0,
                                                        start_time, end_time,
                                                        private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, auction_token_sell_proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, auction_token_sell_proposal_id, True,
+                                   private_key=self.accounts[1].key)
 
         increase_time(VOTE_DURATION + 15)
         proposal = Proposals(self.proposalContract, 0, auction_token_sell_proposal_id)
@@ -334,8 +309,8 @@ class ProposalsTests(EthBaseTest):
                                                        start_time,
                                                        end_time,
                                                        private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, auction_token_sell_proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, auction_token_sell_proposal_id, True,
+                                   private_key=self.accounts[1].key)
 
         increase_time(VOTE_DURATION + 15)
         proposal = Proposals(self.proposalContract, 0, auction_token_sell_proposal_id)
@@ -381,14 +356,14 @@ class ProposalsTests(EthBaseTest):
         self.contractsManagerContract.proposeChangeTrustedAddress(GS_PROJECT_ID, CONTRACTS_INDEX["Token"],
                                                                   self.proposalContract.address,
                                                                   private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[1].key)
         increase_time(VOTE_DURATION + 15)
         proposal = Proposals(self.proposalContract, 0, proposal_id)
         self.assertTrue(proposal.votingAllowed)
         change_address_proposal = ChangeTrustedAddressProposal(self.contractsManagerContract, 0, proposal_id)
-        self.assertEqual(change_address_proposal.contractIndex, CONTRACTS_INDEX["Token"])
-        self.assertEqual(change_address_proposal.contractAddress, self.proposalContract.address)
+        self.assertEqual(change_address_proposal.index, CONTRACTS_INDEX["Token"])
+        self.assertEqual(change_address_proposal.address, self.proposalContract.address)
 
         self.contractsManagerContract.processProposal(proposal_id, private_key=self.accounts[0].key,
                                                       contract_project_id=GS_PROJECT_ID)
@@ -401,8 +376,8 @@ class ProposalsTests(EthBaseTest):
         burn_address = '0x1111111111111111111111111111111111111110'
         self.contractsManagerContract.proposeAddBurnAddress(GS_PROJECT_ID, burn_address,
                                                             private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[1].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[1].key)
         increase_time(VOTE_DURATION + 15)
         proposal = Proposals(self.proposalContract, 0, proposal_id)
         self.assertTrue(proposal.votingAllowed)
@@ -426,8 +401,8 @@ class ProposalsTests(EthBaseTest):
 
         self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
 
-        tx = self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                                  private_key=self.accounts[0].key)
+        tx = self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                        private_key=self.accounts[0].key)
 
         self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
         increase_time(VOTE_DURATION + 15)
@@ -438,27 +413,27 @@ class ProposalsTests(EthBaseTest):
 
         balance_before_1 = self.tokenContract.balanceOf(self.accounts[1].address)
         balance_before_2 = self.tokenContract.balanceOf(self.accounts[2].address)
-        tx = self.fundsManagerContract.processProposal(proposal_id,
-                                                       private_key=self.accounts[0].key,
-                                                       contract_project_id=GS_PROJECT_ID
-                                                       )
-
-        self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
+        tx_list = self.fundsManagerContract.processProposal(proposal_id,
+                                                            private_key=self.accounts[0].key,
+                                                            contract_project_id=GS_PROJECT_ID
+                                                            )
+        for tx in tx_list:
+            self.assertEqual(WEB3.eth.get_transaction_receipt(tx).status, 1)
 
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), balance_before_1 + 100)
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[2].address), balance_before_2 + 5)
 
     def test_propose_eth_transactions(self):
         self.fundsManagerContract.depositEth(GS_PROJECT_ID, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
-                                             wei=0.0005 * 10 ** 18)
+                                             wei=int(0.0005 * 10 ** 18))
 
         proposal_id = self.proposalContract.nextProposalId(GS_PROJECT_ID)
         self.fundsManagerContract.proposeTransaction(GS_PROJECT_ID, [ZERO_ETH_ADDRESS, ZERO_ETH_ADDRESS], [100, 5],
                                                      [self.accounts[1].address, self.accounts[2].address],
                                                      [GS_PROJECT_ID, GS_PROJECT_ID],
                                                      private_key=self.accounts[0].key)
-        self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
-                                             private_key=self.accounts[0].key)
+        self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
+                                   private_key=self.accounts[0].key)
         eth_balance_before_1 = WEB3.eth.get_balance(self.accounts[1].address)
         eth_balance_before_2 = WEB3.eth.get_balance(self.accounts[2].address)
         increase_time(VOTE_DURATION + 15)
@@ -475,12 +450,12 @@ class ProposalsTests(EthBaseTest):
                                                           [self.accounts[0].address], [0],
                                                           private_key=self.accounts[0].key)
         for i in range(4):
-            self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
+            self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
                                                  private_key=self.accounts[i].key)
             acc = WEB3.eth.account.create()
             send_eth(10 ** 18, acc.address, INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY, unit='wei')
             self.tokenContract.transfer(acc.address, 10 ** 18, private_key=self.accounts[i].key)
-            self.proposalContract.voteProposalId(GS_PROJECT_ID, proposal_id, True,
+            self.proposalContract.vote(GS_PROJECT_ID, proposal_id, True,
                                                  private_key=acc.key)
             self.tokenContract.transfer(self.accounts[i].address, 10 ** 18, private_key=acc.key)
 

@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from web3 import Web3
+from web3.exceptions import ContractLogicError
 
 
 def _eth_contract(*a, **kwa):
@@ -14,14 +15,6 @@ class ProposalData:
         self.contract = funds_manager_contract
         self.project_id = project_id
         self.proposal_id = proposal_id
-
-    # noinspection PyAttributeOutsideInit
-    def get_token_name(self, token_address):
-        from utils import ZERO_ETH_ADDRESS
-        if not token_address or token_address == ZERO_ETH_ADDRESS:
-            return 'Ethereum'
-
-        return "token(%s)" % token_address
 
     @property
     def title(self):
@@ -83,17 +76,6 @@ class TransactionProposal(ProposalData):
                  'token': self.tokens[i] if self.tokens[i] is not None else ZERO_ETH_ADDRESS,
                  'depositToProjectId': proposal_list[3][i]})
 
-    # noinspection DuplicatedCode
-    @property
-    def title(self):
-        payments = []
-        for i in range(0, len(self.recipients)):
-            payments.append(
-                f"{self.recipients[i]['amount']:f} {self.get_token_name(self.recipients[i]['token'])}"
-                f" to {self.recipients[i]['address']}")
-
-        return 'Send ' + ', '.join(payments)
-
 
 class ChangeParameterProposal(ProposalData):
     parameters_names = {
@@ -121,43 +103,6 @@ class ChangeParameterProposal(ProposalData):
     @property
     def title(self):
         return "Set FundsManager parameter '%s' to %s" % (self.parameterName, self.value)
-
-
-class TokenSellProposal(ProposalData):
-
-    def __init__(self, token_sell_contract, project_id, proposal_id):
-        super().__init__(token_sell_contract, project_id, proposal_id)
-
-        proposal_list = token_sell_contract.tokenSellProposals(project_id, proposal_id)
-
-        if not isinstance(proposal_list, list):
-            raise AssertionError("TokenSellProposal constructor arg must be a list")
-        if not len(proposal_list) == 8:
-            raise AssertionError("TokenSellProposal proposal tuple should have 8 items")
-
-        self.tokenToSell = proposal_list[0]
-        self.tokenToBuyWith = proposal_list[1]
-        self.duration = proposal_list[2]
-        self.endTime = proposal_list[3]
-        self.priceSignificand = proposal_list[4]
-        self.priceExponent = proposal_list[5]
-        self.maxAmount = proposal_list[6]
-        self.canBuy = proposal_list[7]
-
-        if self.tokenToSell:
-            from utils import get_abi_for_contract_version
-
-            decimals = _eth_contract(self.tokenToSell,
-                                     get_abi_for_contract_version('Token', 'latest', allow_cache=True)).decimals()
-            self.maxAmount = Decimal(self.maxAmount) / Decimal(10) ** decimals
-        else:
-            self.maxAmount = Decimal(self.maxAmount) / Decimal(10) ** 18
-
-    @property
-    def title(self):
-        price = self.priceSignificand / Decimal(10) ** self.priceExponent
-        return f'Trade {self.maxAmount:f} {self.get_token_name(self.tokenToSell)} for ' \
-               f'{self.maxAmount * price:f} {self.get_token_name(self.tokenToBuyWith)}, price {price}'
 
 
 class AuctionSellProposal(ProposalData):
@@ -215,26 +160,31 @@ class ChangeTrustedAddressProposal(ProposalData):
         if not len(proposal_list) == 2:
             raise AssertionError("ChangeTrustedAddressProposal proposal tuple should have 2 items")
 
-        self.contractIndex = proposal_list[0]
-        self.contractAddress = proposal_list[1]
+        self.index = proposal_list[0]
+        self.address = proposal_list[1]
+        self.trusted_addresses = contracts_manager.trustedAddresses
+        self.project_id = project_id
+
+        i = 0
+        try:
+            while True:
+                contracts_manager.trustedAddresses(project_id, i)
+                i += 1
+        except ContractLogicError:
+            self.trustedAddressesCount = i
 
     @property
     def title(self):
-        from utils import CONTRACT_NAMES
-        return "Change address for %s contract to %s" % (CONTRACT_NAMES[self.contractIndex], self.contractAddress)
+        from utils import ZERO_ETH_ADDRESS
+        if self.address == ZERO_ETH_ADDRESS:
+            return "Remove %s from trusted addresses list" % self.trusted_addresses(self.project_id, self.index)
 
+        elif self.index == self.trustedAddressesCount:
+            return "Add %s to trusted addresses list" % self.address
 
-class StopTokenSellProposal(ProposalData):
-
-    def __init__(self, token_sell_contract, project_id, proposal_id):
-        super().__init__(token_sell_contract, project_id, proposal_id)
-
-        proposal_to_delete_id = token_sell_contract.deleteProposals(project_id, proposal_id)
-        self.proposal_to_delete_id = proposal_to_delete_id
-
-    @property
-    def title(self):
-        return "Stop token sell"
+        else:
+            return "Replace trusted address %s with %s" % (
+                self.trusted_addresses(self.project_id, self.index), self.address)
 
 
 class CreateTokensProposal(ProposalData):
