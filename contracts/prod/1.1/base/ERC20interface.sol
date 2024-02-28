@@ -1,4 +1,4 @@
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 interface ERC20interface {
     function decimals() external view returns (uint dec);
