@@ -15,27 +15,27 @@ contract InvalidToken is Initializable {
 
     }
 
-    function decimals() external view returns (uint dec) {
+    function decimals() external pure returns (uint dec) {
         dec = 18;
     }
 
-    function balanceOf(address _addr) external view returns (uint balance) {
+    function balanceOf(address) external pure returns (uint balance) {
         return 0;
     }
 
-    function transfer(address _to, uint _value) external returns (bool success) {
+    function transfer(address, uint) external pure returns (bool success) {
         return false;
     }
 
-    function approve(address _spender, uint _value) external returns (bool success) {
+    function approve(address, uint) external pure returns (bool success) {
         return true;
     }
 
-    function allowance(address _owner, address _spender) external view returns (uint remaining) {
+    function allowance(address, address) external pure returns (uint remaining) {
         return 9;
     }
 
-    function createTokens(uint value) private returns (bool) {
+    function createTokens(uint) private pure returns (bool) {
         return true;
     }
 

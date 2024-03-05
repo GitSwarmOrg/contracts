@@ -60,7 +60,7 @@ contract TokenSell is Common, Initializable, ITokenSell {
     }
 
     function executeProposal(uint projectId, uint proposalId) public {
-        (uint32 typeOfProposal, bool votingAllowed, bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
+        (uint32 typeOfProposal,, bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
         uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
