@@ -31,14 +31,6 @@ contract FundsManager is Common, Initializable, IFundsManager {
     event EthSent(uint projectId, address receiver, uint amount);
     event BalanceUpdated(uint projectId, address tokenAddress, uint amount);
 
-    receive() external payable {
-        revert("You cannot send Ether directly to FundsManager");
-    }
-
-    fallback() external payable {
-        revert("You cannot send Ether directly to FundsManager");
-    }
-
 
     function initialize(
         address _delegates,
@@ -106,7 +98,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
     }
 
     function executeProposal(uint projectId, uint proposalId) external {
-        (uint32 typeOfProposal, uint256 endTime, , bool willExecute,) = proposalContract.proposals(projectId, proposalId);
+        (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
         uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");

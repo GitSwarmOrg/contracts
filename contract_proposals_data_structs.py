@@ -38,10 +38,10 @@ class Proposals(ProposalData):
             raise AssertionError("proposal_list should have 5 items, found %d" % len(proposal_list))
 
         self.typeOfProposal = proposal_list[0]
-        self.endTime = proposal_list[1]
-        self.votingAllowed = proposal_list[2]
-        self.willExecute = proposal_list[3]
-        self.nbOfVoters = proposal_list[4]
+        self.votingAllowed = proposal_list[1]
+        self.willExecute = proposal_list[2]
+        self.nbOfVoters = proposal_list[3]
+        self.endTime = proposal_list[4]
 
 
 class TransactionProposal(ProposalData):
@@ -131,7 +131,7 @@ class AuctionSellProposal(ProposalData):
             from utils import get_abi_for_contract_version
 
             decimals = _eth_contract(self.tokenToSell,
-                                     get_abi_for_contract_version('Token', 'latest', allow_cache=True)).decimals()
+                                     get_abi_for_contract_version('ExpandableSupplyToken', 'latest', allow_cache=True)).decimals()
             self.nbOfTokens = Decimal(self.nbOfTokens) / Decimal(10) ** decimals
         else:
             self.nbOfTokens = Decimal(self.nbOfTokens) / Decimal(10) ** 18
@@ -261,3 +261,9 @@ class ChangeVotingTokenAddressProposal(ProposalData):
     @property
     def title(self):
         return "Change voting token address to %s" % self.contractAddress
+
+
+class DisableCreateMoreTokensProposal(ProposalData):
+    @property
+    def title(self):
+        return "Disable max supply increase for <token address=\"%s\"/>" % self.contract.address

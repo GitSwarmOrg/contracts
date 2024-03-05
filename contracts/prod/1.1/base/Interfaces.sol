@@ -63,7 +63,7 @@ interface IGasStation {
 
 
 interface IProposal {
-    function proposals(uint, uint) external view returns (uint32, uint, bool, bool, uint64);
+    function proposals(uint, uint) external view returns (uint32, bool, bool, uint64, uint);
     function changeParameterProposals(uint, uint) external view returns (bytes32, uint);
     function nextProposalId(uint) external view returns (uint);
     function parameters(uint, bytes32) external view returns (uint);

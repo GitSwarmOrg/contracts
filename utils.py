@@ -1,6 +1,7 @@
 import json
 import logging
 import os.path
+import sys
 import types
 from typing import Literal
 from unittest.mock import patch, MagicMock, PropertyMock
@@ -81,7 +82,8 @@ PROPOSAL_TYPES = {
     10: TransferToGasAddressProposal,
     11: AddBurnAddressProposal,
     12: UpgradeContractsProposal,
-    13: ChangeVotingTokenAddressProposal
+    13: ChangeVotingTokenAddressProposal,
+    14: DisableCreateMoreTokensProposal
 }
 
 PROPOSAL_CONTRACT = {
@@ -97,7 +99,8 @@ PROPOSAL_CONTRACT = {
     10: 'GasStation',
     11: 'ContractsManager',
     12: 'ContractsManager',
-    13: 'ContractsManager'
+    13: 'ContractsManager',
+    14: 'Token',
 }
 
 LATEST_CONTRACTS_VERSION = '1.1'
@@ -479,7 +482,6 @@ def deploy_test_contract(name, *contract_constructor_args, private_key, allow_ca
                                          *contract_constructor_args, private_key=private_key, allow_cache=allow_cache)
 
 
-
 def deploy_contract_version_and_wait(name, version, *contract_constructor_args, private_key, allow_cache=False):
     return deploy_contract_file_and_wait(get_contract_file_path(name, version),
                                          *contract_constructor_args, private_key=private_key, allow_cache=allow_cache)
@@ -726,3 +728,14 @@ class Method:
 
     def __repr__(self):
         return str(self.method)
+
+
+def hamming_distance(s1, s2):
+    if len(s1) != len(s2):
+        return sys.maxsize
+
+    return sum(el1 != el2 for el1, el2 in zip(s1, s2))
+
+
+expandable_token = compile_contract(get_contract_file_path('ExpandableSupplyToken', 'latest'), allow_cache=True)
+fixed_supply_token = compile_contract(get_contract_file_path('FixedSupplyToken', 'latest'), allow_cache=True)

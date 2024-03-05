@@ -43,7 +43,7 @@ contract GasStation is Common, Initializable, IGasStation {
     }
 
     function executeProposal(uint id) external {
-        (uint32 typeOfProposal, uint256 endTime, , bool willExecute,) = proposalContract.proposals(0, id);
+        (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(0, id);
         uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
         require(id < proposalContract.nextProposalId(0), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");

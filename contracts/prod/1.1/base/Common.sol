@@ -13,6 +13,15 @@ contract Common is Constants {
     IGasStation public gasStationContract;
     IContractsManager public contractsManagerContract;
 
+    receive() external payable {
+        revert("You cannot send Ether directly to FundsManager");
+    }
+
+    fallback() external payable {
+        revert("You cannot send Ether directly to FundsManager");
+    }
+
+
     modifier restricted(uint projectId) {
         require(contractsManagerContract.isTrustedAddress(projectId, msg.sender),
             string.concat("Restricted function ", Strings.toHexString(uint256(uint160(msg.sender)))));

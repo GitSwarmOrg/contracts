@@ -182,7 +182,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
     }
 
     function executeProposal(uint projectId, uint proposalId) external {
-        (uint32 typeOfProposal, uint256 endTime, , bool willExecute,) = proposalContract.proposals(projectId, proposalId);
+        (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
         uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");

@@ -18,4 +18,5 @@ contract Constants {
     uint32 constant public ADD_BURN_ADDRESS = 11;
     uint32 constant public UPGRADE_CONTRACTS = 12;
     uint32 constant public CHANGE_VOTING_TOKEN_ADDRESS = 13;
+    uint32 constant public DISABLE_CREATE_MORE_TOKENS = 14;
 }

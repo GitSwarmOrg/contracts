@@ -8,7 +8,7 @@ class ReclaimFundsTests(EthBaseTest):
 
     def setUp(self):
         super().setUp()
-        self.neptune_token_contract, neptune_token_tx_hash = deploy_contract_version_and_wait('Token', 'latest',
+        self.neptune_token_contract, neptune_token_tx_hash = deploy_contract_version_and_wait('ExpandableSupplyToken', 'latest',
                                                                                               'PROJ_DB_ID',
                                                                                               10000 * self.DECIMALS,
                                                                                               1000 * self.DECIMALS,
@@ -19,7 +19,7 @@ class ReclaimFundsTests(EthBaseTest):
                                                                                               private_key=self.private_key,
                                                                                               allow_cache=True)
 
-        self.saturn_token_contract, saturn_token_tx_hash = deploy_contract_version_and_wait('Token', 'latest',
+        self.saturn_token_contract, saturn_token_tx_hash = deploy_contract_version_and_wait('ExpandableSupplyToken', 'latest',
                                                                                             'PROJ_DB_ID2',
                                                                                             10000 * self.DECIMALS,
                                                                                             1000 * self.DECIMALS,

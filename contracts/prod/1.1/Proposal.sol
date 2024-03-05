@@ -27,10 +27,10 @@ contract Proposal is Common, Initializable, IProposal {
 
     struct ProposalData {
         uint32 typeOfProposal;
-        uint endTime;
         bool votingAllowed;
         bool willExecute;
         uint64 nrOfVoters;
+        uint endTime;
         mapping(uint64 => address) voters;
         mapping(address => Vote) votes;
     }
@@ -67,6 +67,8 @@ contract Proposal is Common, Initializable, IProposal {
     }
 
     function initializeParameterMinMax() internal {
+        // 60 second values are for testing only. TODO: Change to 1 day for mainnet.
+
         // Proposal voting duration
         parameterMinValues[keccak256("VoteDuration")] = 60 seconds;
         parameterMaxValues[keccak256("VoteDuration")] = 30 days;
@@ -98,7 +100,14 @@ contract Proposal is Common, Initializable, IProposal {
     }
 
     function internalInitializeParameters(uint projectId) internal virtual {
+        // 60 second values are for testing only. TODO: Change to 3 days for mainnet.
+        // 5 minute ExpirationPeriod is for testing only. TODO: Change to 7 days for mainnet.
+
         parameters[projectId][keccak256("VoteDuration")] = 60 seconds;
+
+        // MaxNrOfDelegators set to 1000 means that a minimum percentage of 0.1% of the circulating supply of tokens
+        // is needed to vote on/create a proposal. This helps mitigate the risk of counting votes costing more gas than
+        // the block limit
         parameters[projectId][keccak256("MaxNrOfDelegators")] = 1000;
         parameters[projectId][keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 60 seconds;
         parameters[projectId][keccak256("RequiredVotingPowerPercentageToCreateTokens")] = 80;
@@ -174,7 +183,7 @@ contract Proposal is Common, Initializable, IProposal {
             } else {
                 yesVotes += vp;
             }
-            if (noVotes * 100 / circulatingSupply >= parameters[projectId][keccak256("VetoMinimumPercentage")]){
+            if (noVotes * 100 / circulatingSupply >= parameters[projectId][keccak256("VetoMinimumPercentage")]) {
                 delete proposals[projectId][proposalId];
                 emit ContestedProposal(projectId, proposalId, yesVotes, noVotes);
                 return true;

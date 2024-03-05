@@ -109,7 +109,7 @@ class ProposalsTests(EthBaseTest):
             self.assertIn("Arithmetic operation overflowed outside of an unchecked block", str(e))
 
     def test_propose_token_transaction_for_other_token_than_voting_token(self):
-        self.tokenSaturnContract, self.tokenTxHash = deploy_contract_version_and_wait('Token', 'latest',
+        self.tokenSaturnContract, self.tokenTxHash = deploy_contract_version_and_wait('ExpandableSupplyToken', 'latest',
                                                                                       'PROJ_DB_ID',
                                                                                       self.fm_supply,
                                                                                       self.token_buffer_amount,
