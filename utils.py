@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock, PropertyMock
 
 from eth_account import Account
 from eth_utils import event_abi_to_log_topic, encode_hex
-from marshmallow import ValidationError
 from web3 import HTTPProvider
 from web3.exceptions import InvalidAddress, BadFunctionCallOutput
 
@@ -144,40 +143,6 @@ def get_erc20_abi():
     if _erc20_abi is None:
         _erc20_abi = compile_contract(get_base_file_path('ERC20Interface', 'latest'), allow_cache=True).abi
     return _erc20_abi
-
-
-def check_if_erc20(address):
-    try:
-        if address == ZERO_ETH_ADDRESS:
-            return
-
-        # Check if the address has contract code
-        if WEB3.eth.get_code(address) == b'':
-            raise ValidationError('Address %s is not a contract.' % address)
-
-        # Instantiate the contract
-        contract = WEB3.eth.contract(address=address, abi=get_erc20_abi())
-
-        # Check for essential ERC20 functions by calling them
-        essential_functions = {
-            'name': [],
-            'symbol': [],
-            'decimals': [],
-            'totalSupply': [],
-            'balanceOf': [ZERO_ETH_ADDRESS],
-            'approve': [ZERO_ETH_ADDRESS, 0],  # 0 as the amount
-            'allowance': [ZERO_ETH_ADDRESS, ZERO_ETH_ADDRESS],
-        }
-
-        for func_name, args in essential_functions.items():
-            try:
-                func = getattr(contract.functions, func_name)
-                func(*args).call()  # Attempt to call the function with appropriate arguments
-            except (ContractLogicError, AttributeError, BadFunctionCallOutput):
-                raise ValidationError(f'Contract at address {address} does not implement ERC20 function "{func_name}"')
-
-    except InvalidAddress:
-        raise ValidationError('Invalid token address %s.' % address)
 
 
 class EthContract:
