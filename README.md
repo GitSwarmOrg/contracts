@@ -1,6 +1,6 @@
 Solidity contracts used on the [GitSwarm.com](https://gitswarm.com/) platform
 
-Tested using Hardhat 2.20.1 and pytest 7.4.0.
+Tested using Hardhat 2.21.0 and pytest 7.4.0.
 
 ## Notes
 The `requirements.txt` file lists all the Python dependencies. Install them by running:
