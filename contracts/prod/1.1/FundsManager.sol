@@ -8,6 +8,7 @@ import "./base/Common.sol";
 //import "hardhat/console.sol";
 
 contract FundsManager is Common, Initializable, IFundsManager {
+    using Address for address payable;
     uint constant PERCENTAGE_MULTIPLIER = 10 ** 18;
 
     mapping(uint => mapping(uint => TransactionProposal)) transactionProposals;
@@ -134,7 +135,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
                     if (to == address(gasStationContract)) {
                         gasStationContract.buyGasForProject{value: amount[i]}(projectId);
                     } else {
-                        to.transfer(amount[i]);
+                        to.sendValue(amount[i]);
                     }
                 } else {
                     ERC20interface erc20Contract = ERC20interface(tokenAddress[i]);
@@ -174,7 +175,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
         emit DestroyToken(projectId, votingTokenAmount, ethAmount, tokenContractsAddresses, sentTokenAmounts, msg.sender);
         if (ethAmount > 0) {
             balances[projectId][address(0)] -= ethAmount;
-            payable(msg.sender).transfer(ethAmount);
+            payable(msg.sender).sendValue(ethAmount);
         }
     }
 
@@ -189,7 +190,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
     function sendEther(uint projectId, address payable receiver, uint amount) external restricted(projectId) {
         require(amount <= balances[projectId][address(0)], "Not enough Ether on FundsManager");
         balances[projectId][address(0)] -= amount;
-        receiver.transfer(amount);
+        receiver.sendValue(amount);
         emit EthSent(projectId, receiver, amount);
     }
 

@@ -67,7 +67,7 @@ class TransactionProposal(ProposalData):
             self.tokens = proposal_list[0]
             if self.tokens[i] and self.tokens[i] != ZERO_ETH_ADDRESS:
                 decimals = _eth_contract(self.tokens[i],
-                                         get_abi_for_contract_version('Token', 'latest', allow_cache=True)).decimals()
+                                         get_abi_for_contract_version('ExpandableSupplyToken', 'latest', allow_cache=True)).decimals()
             else:
                 decimals = 18
             self.recipients.append(
@@ -220,7 +220,7 @@ class TransferToGasAddressProposal(ProposalData):
 
     @property
     def title(self):
-        return f'Transfer {self.amount / 10 ** 18:f} Eth to gas address %s' % self.to
+        return f'Transfer {self.amount / 10 ** 18:f} ETH to gas address %s' % self.to
 
 
 class AddBurnAddressProposal(ProposalData):

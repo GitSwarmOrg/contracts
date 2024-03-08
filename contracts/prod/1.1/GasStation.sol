@@ -7,6 +7,7 @@ import "./ContractsManager.sol";
 import "./base/Common.sol";
 
 contract GasStation is Common, Initializable, IGasStation {
+    using Address for address payable;
 
     mapping(uint => TransferToGasAddressProposal) public transferToGasAddressProposals;
 
@@ -57,7 +58,7 @@ contract GasStation is Common, Initializable, IGasStation {
             require(payable(address(this)).balance >= amount);
             delete transferToGasAddressProposals[id];
             proposalContract.deleteProposal(0, id);
-            to_address.transfer(amount);
+            to_address.sendValue(amount);
             emit TransferredGas(to_address, amount);
         } else {
             revert('Unexpected proposal type');

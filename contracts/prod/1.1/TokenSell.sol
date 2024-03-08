@@ -7,6 +7,7 @@ import "./base/ERC20interface.sol";
 import "./base/Common.sol";
 
 contract TokenSell is Common, Initializable, ITokenSell {
+    using Address for address payable;
 
     mapping(uint => mapping(uint => AuctionProposal)) public auctionProposals;
 
@@ -101,7 +102,7 @@ contract TokenSell is Common, Initializable, ITokenSell {
 
         p.buyersAmounts[msg.sender] -= withdrawAmount;
         p.totalEthReceived -= withdrawAmount;
-        payable(msg.sender).transfer(withdrawAmount);
+        payable(msg.sender).sendValue(withdrawAmount);
 
         emit WithdrawAuction(projectId, proposalId, p.totalEthReceived, msg.sender, p.buyersAmounts[msg.sender]);
     }
@@ -118,7 +119,7 @@ contract TokenSell is Common, Initializable, ITokenSell {
         uint amount = p.buyersAmounts[msg.sender];
         if (p.totalEthReceived < p.minimumWei) {
             p.buyersAmounts[msg.sender] = 0;
-            payable(msg.sender).transfer(amount);
+            payable(msg.sender).sendValue(amount);
         } else {
             uint amount_percentage;
             uint amount_to_send;
@@ -151,7 +152,7 @@ contract TokenSell is Common, Initializable, ITokenSell {
             for (uint i = 0; i < claimers.length; i++) {
                 uint buyer_amount = p.buyersAmounts[claimers[i]];
                 p.buyersAmounts[claimers[i]] = 0;
-                payable(claimers[i]).transfer(buyer_amount);
+                payable(claimers[i]).sendValue(buyer_amount);
                 amount += buyer_amount;
                 emit ClaimAuction(projectId, proposalId, p.totalEthReceived, claimers[i]);
             }

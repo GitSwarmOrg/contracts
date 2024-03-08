@@ -254,7 +254,7 @@ class EthContract:
                     gas_needed = self.estimate_gas(name, *args, send_from=account.address)
                     gas_eth_cost = gas_price * gas_needed
                     if deduct_gas_project.gas_amount < gas_eth_cost:
-                        msg = '%s Eth' % (gas_eth_cost / 10 ** 9)
+                        msg = '%s ETH' % (gas_eth_cost / 10 ** 18)
                         raise InsufficientGasOnProjectException(msg)
                 except ValueError as e:
                     self.get_error_message_for_reverted_transaction(*args, name=name, account=account, exception=e)
