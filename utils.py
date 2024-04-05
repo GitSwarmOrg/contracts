@@ -1,6 +1,7 @@
 import json
 import logging
 import os.path
+import re
 import sys
 import types
 from typing import Literal
@@ -346,6 +347,8 @@ def get_abi_from_sol_file(filename, allow_cache=False):
 
     artifact_path = os.path.join(BASE_DIR, 'artifacts', filename)
     compiled_file = os.path.join(artifact_path, f"{base_name}.json")
+    compiled_file = compiled_file.replace('\\', '/')
+    compiled_file = re.sub(r'(.*contracts/).*/([^/]+)$', r'\1\2', compiled_file)
 
     with open(compiled_file, 'r') as f:
         compiled_contract = json.load(f)
@@ -406,6 +409,9 @@ def compile_contract(filename, allow_cache=False):
 
     artifact_path = os.path.join(BASE_DIR, 'artifacts', filename)
     compiled_file = os.path.join(artifact_path, f"{base_name}.json")
+
+    compiled_file = compiled_file.replace('\\', '/')
+    compiled_file = re.sub(r'(.*contracts/).*/([^/]+)$', r'\1\2', compiled_file)
 
     with open(compiled_file, 'r') as f:
         compiled_contract = json.load(f)
