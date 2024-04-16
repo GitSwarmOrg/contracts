@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
+from brownie.exceptions import VirtualMachineError
 from web3 import Web3
 from web3.exceptions import ContractLogicError
 
@@ -32,8 +33,6 @@ class Proposals(ProposalData):
 
         proposal_list = proposal_contract.proposals(project_id, proposal_id)
 
-        if not isinstance(proposal_list, list):
-            raise AssertionError("proposal_list arg must be a list")
         if not len(proposal_list) == 5:
             raise AssertionError("proposal_list should have 5 items, found %d" % len(proposal_list))
 
@@ -56,9 +55,6 @@ class TransactionProposal(ProposalData):
         self._set_proposal_data_list(proposal_list)
 
     def _set_proposal_data_list(self, proposal_list):
-        if not isinstance(proposal_list, list):
-            raise AssertionError("proposal_list must be a list")
-
         from utils import get_abi_for_contract_version
         from utils import ZERO_ETH_ADDRESS
 
@@ -67,7 +63,7 @@ class TransactionProposal(ProposalData):
             self.tokens = proposal_list[0]
             if self.tokens[i] and self.tokens[i] != ZERO_ETH_ADDRESS:
                 decimals = _eth_contract(self.tokens[i],
-                                         get_abi_for_contract_version('ExpandableSupplyToken', 'latest', allow_cache=True)).decimals()
+                                         get_abi_for_contract_version('ExpandableSupplyToken', 'latest')).decimals()
             else:
                 decimals = 18
             self.recipients.append(
@@ -79,12 +75,12 @@ class TransactionProposal(ProposalData):
 
 class ChangeParameterProposal(ProposalData):
     parameters_names = {
-        Web3.keccak(text="VoteDuration"): 'VoteDuration',
-        Web3.keccak(text="MaxNrOfDelegators"): 'MaxNrOfDelegators',
-        Web3.keccak(text="BufferBetweenEndOfVotingAndExecuteProposal"): 'BufferBetweenEndOfVotingAndExecuteProposal',
-        Web3.keccak(text="RequiredVotingPowerPercentageToCreateTokens"): 'RequiredVotingPowerPercentageToCreateTokens',
-        Web3.keccak(text="VetoMinimumPercentage"): 'VetoMinimumPercentage',
-        Web3.keccak(text="ExpirationPeriod"): 'ExpirationPeriod'
+        Web3.keccak(text="VoteDuration").hex(): 'VoteDuration',
+        Web3.keccak(text="MaxNrOfVoters").hex(): 'MaxNrOfVoters',
+        Web3.keccak(text="BufferBetweenEndOfVotingAndExecuteProposal").hex(): 'BufferBetweenEndOfVotingAndExecuteProposal',
+        Web3.keccak(text="RequiredVotingPowerPercentageToCreateTokens").hex(): 'RequiredVotingPowerPercentageToCreateTokens',
+        Web3.keccak(text="VetoMinimumPercentage").hex(): 'VetoMinimumPercentage',
+        Web3.keccak(text="ExpirationPeriod").hex(): 'ExpirationPeriod'
     }
 
     def __init__(self, proposal_contract, project_id, proposal_id):
@@ -92,12 +88,10 @@ class ChangeParameterProposal(ProposalData):
 
         proposal_list = proposal_contract.changeParameterProposals(project_id, proposal_id)
 
-        if not isinstance(proposal_list, list):
-            raise AssertionError("ChangeParameterProposal constructor arg must be a list")
         if not len(proposal_list) == 2:
             raise AssertionError("ChangeParameterProposal proposal tuple should have 2 items")
 
-        self.parameterName = self.parameters_names[proposal_list[0]]
+        self.parameterName = self.parameters_names['0x'+proposal_list[0].hex()]
         self.value = proposal_list[1]
 
     @property
@@ -112,8 +106,6 @@ class AuctionSellProposal(ProposalData):
 
         proposal_list = token_sell_contract.auctionProposals(project_id, proposal_id)
 
-        if not isinstance(proposal_list, list):
-            raise AssertionError("AuctionSellProposal constructor arg must be a list")
         if not len(proposal_list) == 9:
             raise AssertionError("AuctionSellProposal proposal tuple should have 8 items")
 
@@ -131,7 +123,7 @@ class AuctionSellProposal(ProposalData):
             from utils import get_abi_for_contract_version
 
             decimals = _eth_contract(self.tokenToSell,
-                                     get_abi_for_contract_version('ExpandableSupplyToken', 'latest', allow_cache=True)).decimals()
+                                     get_abi_for_contract_version('ExpandableSupplyToken', 'latest')).decimals()
             self.nbOfTokens = Decimal(self.nbOfTokens) / Decimal(10) ** decimals
         else:
             self.nbOfTokens = Decimal(self.nbOfTokens) / Decimal(10) ** 18
@@ -155,8 +147,6 @@ class ChangeTrustedAddressProposal(ProposalData):
 
         proposal_list = contracts_manager.changeTrustedAddressProposals(project_id, proposal_id)
 
-        if not isinstance(proposal_list, list):
-            raise AssertionError("ChangeTrustedAddressProposal constructor arg must be a list")
         if not len(proposal_list) == 2:
             raise AssertionError("ChangeTrustedAddressProposal proposal tuple should have 2 items")
 
@@ -170,7 +160,7 @@ class ChangeTrustedAddressProposal(ProposalData):
             while True:
                 contracts_manager.trustedAddresses(project_id, i)
                 i += 1
-        except ContractLogicError:
+        except VirtualMachineError:
             self.trustedAddressesCount = i
 
     @property
@@ -210,8 +200,6 @@ class TransferToGasAddressProposal(ProposalData):
 
         transfer_to_gas_address_proposal = gas_station_contract.transferToGasAddressProposals(proposal_id)
 
-        if not isinstance(transfer_to_gas_address_proposal, list):
-            raise AssertionError("ChangeTrustedAddressProposal constructor arg must be a list")
         if not len(transfer_to_gas_address_proposal) == 2:
             raise AssertionError("ChangeTrustedAddressProposal proposal tuple should have 5 items")
 
@@ -240,14 +228,14 @@ class UpgradeContractsProposal(ProposalData):
     def __init__(self, contracts_manager, project_id, proposal_id):
         super().__init__(contracts_manager, project_id, proposal_id)
 
-        (self.delegates, self.fundsManager, self.tokenSell, self.proposal,
+        (self.delegates, self.fundsManager, self.parameters, self.proposal,
          self.gasStation, self.contractsManagerContract) = contracts_manager.upgradeContractsProposals(proposal_id)
 
     @property
     def title(self):
-        return 'Upgrade contracts to delegates %s, fundsManager %s, tokenSell %s, proposal %s, ' \
+        return 'Upgrade contracts to delegates %s, fundsManager %s, parameters %s, proposal %s, ' \
                'gasStation %s, contractsManagerContract %s' % (
-            self.delegates, self.fundsManager, self.tokenSell,
+            self.delegates, self.fundsManager, self.parameters,
             self.proposal, self.gasStation, self.contractsManagerContract)
 
 

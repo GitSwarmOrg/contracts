@@ -20,12 +20,12 @@ contract GitSwarmToken is ExpandableSupplyTokenBase, Initializable {
         uint creatorSupply,
         address _delegates,
         address _fundsManager,
-        address _tokenSell,
+        address _parameters,
         address _proposal,
         address _gasStation,
         address _contractsManager
     ) public initializer {
-        _init(_delegates, _fundsManager, _tokenSell, _proposal, _gasStation, _contractsManager);
+        _init(_delegates, _fundsManager, _parameters, _proposal, _gasStation, _contractsManager);
         name = tokenName;
         symbol = tokenSymbol;
         contractsManagerContract.createProject(prjId, address(this));

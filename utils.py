@@ -1,19 +1,26 @@
+import hashlib
 import json
 import logging
 import os.path
 import re
 import sys
 import types
+from time import sleep
 from typing import Literal
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
+from brownie import *
+from brownie.network import gas_price
+from brownie.network.gas.strategies import LinearScalingStrategy
+from brownie.network.transaction import TransactionReceipt
 from eth_account import Account
-from eth_utils import event_abi_to_log_topic, encode_hex
+from rich import console
 from web3 import HTTPProvider
-from web3.exceptions import InvalidAddress, BadFunctionCallOutput
 
 from contract_proposals_data_structs import *
 
+network.connect('hardhat')
+gas_price(LinearScalingStrategy("10 gwei", "50 gwei", 1.1))
 log = logging.getLogger(__name__)
 
 ETHEREUM_NODE_ADDRESS = "http://localhost:8545"
@@ -22,6 +29,7 @@ MAX_GAS_LIMIT = 8000000
 INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 GITSWARM_ACCOUNT_ADDRESS = '0x0634D869e44cB96215bE5251fE9dE0AEE10a52Ce'
 
+GS_PROJECT_ID = 0
 GS_PROJECT_DB_ID = 'gs'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,16 +40,13 @@ class AttrDict(dict):
         self.__dict__ = self
 
 
-ETHEREUM_NODE = HTTPProvider(ETHEREUM_NODE_ADDRESS)
-WEB3 = Web3(ETHEREUM_NODE)
-
 ZERO_ETH_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 CONTRACTS_INDEX = {
     "Token": 0,
     "Delegates": 1,
     "FundsManager": 2,
-    "TokenSell": 3,
+    "Parameters": 3,
     "Proposal": 4,
 }
 
@@ -49,7 +54,7 @@ INDEX_CONTRACTS = {
     0: "Token",
     1: "Delegates",
     2: "FundsManager",
-    3: "TokenSell",
+    3: "Parameters",
     4: "Proposal",
 }
 
@@ -58,14 +63,14 @@ CONTRACT_NAMES = {v: k for k, v in CONTRACTS_INDEX.items()}
 UPGRADABLE_CONTRACTS = [
     "Delegates",
     "FundsManager",
-    "TokenSell",
+    "Parameters",
     "Proposal"
 ]
 
 PROJECT_CONTRACTS = [
     "Delegates",
     "FundsManager",
-    "TokenSell",
+    "Parameters",
     "Proposal",
     "ContractsManager"]
 
@@ -91,7 +96,7 @@ PROPOSAL_CONTRACT = {
     2: 'FundsManager',
     3: 'Token',
     4: 'TokenSell',
-    5: 'Proposal',
+    5: 'Parameters',
     6: 'FundsManager',
     7: 'TokenSell',
     8: 'TokenSell',
@@ -116,7 +121,7 @@ PAYROLL_GAS_COST = {1: 519953, 5: 879852, 10: 1348215, 15: 1816708, 20: 2285141}
 
 
 class Defaults:
-    gas_price = WEB3.to_wei(50, 'gwei')
+    gas_price = Web3.to_wei(50, 'gwei')
 
 
 class InsufficientGasOnProjectException(Exception):
@@ -125,25 +130,7 @@ class InsufficientGasOnProjectException(Exception):
 
 contracts_cache = {}
 
-
-def get_contract(address, abi):
-    key = address + str(len(abi))
-    if address in contracts_cache:
-        return contracts_cache[key]
-    else:
-        contract = WEB3.eth.contract(address=address, abi=abi)
-        contracts_cache[key] = contract
-    return contract
-
-
 _erc20_abi = None
-
-
-def get_erc20_abi():
-    global _erc20_abi
-    if _erc20_abi is None:
-        _erc20_abi = compile_contract(get_base_file_path('ERC20Interface', 'latest'), allow_cache=True).abi
-    return _erc20_abi
 
 
 class EthContract:
@@ -156,12 +143,10 @@ class EthContract:
         self.abi = abi
         self.private_key = private_key
 
-        self._contract = None
+        self._contract = Contract.from_abi("EthContractInstance", address, abi)
 
-        for abi_entry in abi:
-            if abi_entry["type"] == "function":
-                func = getattr(self._c().functions, abi_entry["name"], None)
-                func.abi = abi_entry
+    def balance(self):
+        return self._contract.balance()
 
     # noinspection PyPep8Naming
     def processProposal(self, proposal_id, contract_project_id, expect_to_execute=False, expect_to_not_execute=False,
@@ -185,110 +170,46 @@ class EthContract:
                 tx_list.append(self.executeProposal(contract_project_id, proposal_id, **kwargs))
         return tx_list
 
-    def _c(self):
-        if self._contract is None:
-            self._contract = get_contract(address=self.address, abi=self.abi)
-        return self._contract
-
     def concise(self, kwargs=None):
         return self._contract.caller(kwargs)
 
     def topic_for(self, event_name: str):
-        event = getattr(self._c().events, event_name)
+        event = getattr(self._contract.events, event_name, None)
         if event is None:
-            raise ValueError("Event %s not found." % event_name)
-        # noinspection PyProtectedMember
-        return encode_hex(event_abi_to_log_topic(event._get_event_abi()))
-
-    def estimate_gas(self, func_name, *args, send_from=None):
-        func = getattr(self._c().functions, func_name, None)
-        if not func:
-            raise ValueError("Function '%s' does not exist on contract %s" % (func_name, self._c().address))
-
-        if func.abi['stateMutability'] == 'view':
-            return 0
-
-        return func(*args).estimate_gas({'from': send_from} if send_from else None)
-
-    def has_function(self, name):
-        return getattr(self._c().functions, name, None) is not None
+            raise ValueError(f"Event {event_name} not found.")
+        return Web3.keccak(text=event.abi['name']).hex()
 
     wait_until_mined = False
 
     def __getattr__(self, name):
-        func = getattr(self._c().functions, name, None)
+        func = getattr(self._contract, name, None)
         if not func:
-            raise ValueError("Function '%s' does not exist on contract %s" % (name, self._c().address))
+            raise ValueError(f"Function '{name}' does not exist on contract")
 
-        def call_contract_function(*args, private_key=self.private_key, gas=None,
-                                   gas_price=None, expect_success=True, wei=0,
-                                   on_transaction_mined=None, wait_until_mined=self.wait_until_mined,
-                                   before_send=None, deduct_gas_project=None, only_build_tx=False):
-            if func.abi['stateMutability'] == 'view' or func.abi['stateMutability'] == 'pure':
-                cc_func = getattr(self.concise(), name, None)
-                return cc_func(*args)
+        def call_contract_function(*args, gas=None, gas_price=None, expect_success=True,
+                                   wait_until_mined=self.wait_until_mined, wei=0,
+                                   private_key=self.private_key):
+            account = accounts.add(private_key)
+            transaction_parameters = {'from': account, 'value': wei}
+            print(f"Contract function {name} called on {self._contract.address} by account {account.address}")
 
-            if gas is None:
-                gas = MAX_GAS_LIMIT
-                # gas = self.estimate_gas(name, *args)
-                # log.debug("Estimated gas is %s for %s -> '%s' args: %s" % (
-                #     gas, self._c().address, name, str(args)))
-                # gas *= Decimal('1.25')
-                # gas = gas.__ceil__()
+            if gas is not None:
+                transaction_parameters['gas'] = gas
 
-            if gas_price is None and deduct_gas_project is not None and deduct_gas_project.gas_price is not None:
-                gas_price = WEB3.to_wei(int(deduct_gas_project.gas_price), 'gwei')
+            if func.abi['stateMutability'] in ['view', 'pure']:
+                # For view or pure functions, just call them
+                return func.call(*args, transaction_parameters)
+            else:
+                # For state-changing functions, send a transaction
+                tx = func.transact(*args, transaction_parameters)
 
-            if gas_price is None:
-                gas_price = Defaults.gas_price
+                if wait_until_mined:
+                    # Wait for the transaction to be mined
+                    tx.wait(1)
+                    if expect_success and tx.status != 1:
+                        raise Exception("Transaction failed.")
 
-            assert private_key
-            account = Account.from_key(private_key)
-            print(f'new tx - from {account.address} -> {name}')
-
-            if deduct_gas_project:
-                if WEB3.eth.chain_id == 17 or WEB3.eth.chain_id == 28872323069:
-                    # dummy transaction to move the clock forward on the poa testnet blockchain
-                    send_eth(1, GITSWARM_ACCOUNT_ADDRESS, INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY, 'gwei', True)
-
-                try:
-                    gas_needed = self.estimate_gas(name, *args, send_from=account.address)
-                    gas_eth_cost = gas_price * gas_needed
-                    if deduct_gas_project.gas_amount < gas_eth_cost:
-                        msg = '%s ETH' % (gas_eth_cost / 10 ** 18)
-                        raise InsufficientGasOnProjectException(msg)
-                except ValueError as e:
-                    self.get_error_message_for_reverted_transaction(*args, name=name, account=account, exception=e)
-
-            nonce = get_nonce_for_address(account.address)
-            transaction = func(*args).build_transaction(
-                {'chainId': WEB3.eth.chain_id, 'gas': gas, 'gasPrice': gas_price, 'nonce': nonce,
-                 'value': wei})
-
-            signed_txn = WEB3.eth.account.sign_transaction(transaction, private_key=account.key)
-            txhash = signed_txn.hash
-            if before_send:
-                before_send(txhash)
-
-            if not only_build_tx:
-                WEB3.eth.send_raw_transaction(signed_txn.rawTransaction)
-
-            log.debug("%s -> '%s' called. With account: %s; args: %s; gasPrice: %s; tx-hash: %s" % (
-                self._c().address, name, account.address, str(args), str(gas_price), txhash.hex()))
-
-            if wait_until_mined:
-                receipt = WEB3.eth.wait_for_transaction_receipt(txhash, timeout=None)
-
-                gas_cost = receipt.gasUsed
-
-                log.debug("%s -> '%s' mined for %s gas. With account: %s; args: %s; tx-hash: %s" % (
-                    self._c().address, name, gas_cost, account.address, str(args), txhash.hex()))
-
-                if expect_success and receipt.status != 1:
-                    self.get_error_message_for_reverted_transaction(*args, name=name, account=account,
-                                                                    receipt=receipt, wei=wei)
-
-            return txhash if not only_build_tx else (txhash, signed_txn)
+                return tx.txid
 
         return call_contract_function
 
@@ -300,7 +221,7 @@ class EthContract:
             raise ValueError(
                 "Failed contract call %s -> '%s' called with account: %s; args: %s"
                 "\n%s"
-                "\nMessage: %s" % (self._c().address, name, account.address, str(args),
+                "\nMessage: %s" % (self._contract.address, name, account.address, str(args),
                                    "\nTxHash: %s" % receipt.transactionHash.hex() if receipt else '',
                                    str(e))) from exception if exception else e
 
@@ -309,40 +230,24 @@ def send_eth_from_default_account(amount, address, unit='ether'):
     send_eth(amount, address, INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY)
 
 
-def get_nonce_for_address(address):
-    return WEB3.eth.get_transaction_count(address, 'pending')
+def send_eth(amount, recipient, private_key, unit='ether', wait_until_mined=False, timeout=120):
+    # Load the account using the private key
+    account = accounts.add(private_key)
 
+    # Convert amount to Wei, Brownie's Wei function can understand units like 'ether'
+    value_in_wei = Wei(f"{amount} {unit}")
 
-def send_eth(amount, address, private_key, unit='ether', wait_until_mined=False, timeout=120):
-    account = Account.from_key(private_key)
-    nonce = get_nonce_for_address(account.address)
+    # Send the transaction
+    transaction = account.transfer(recipient, value_in_wei)
 
-    signed_txn = WEB3.eth.account.sign_transaction(
-        dict(
-            nonce=nonce,
-            gasPrice=WEB3.to_wei('5', 'gwei'),
-            gas=100000,
-            to=address,
-            chainId=WEB3.eth.chain_id,
-            value=WEB3.to_wei(amount, unit)
-        ),
-        private_key)
-    txh = WEB3.eth.send_raw_transaction(signed_txn.rawTransaction)
     if wait_until_mined:
-        WEB3.eth.wait_for_transaction_receipt(txh, timeout)
-        return txh
+        # Wait for the transaction to be mined
+        transaction.wait(timeout)
+
+    return transaction.txid
 
 
-def send_eth_and_wait(amount, address, private_key, timeout=None, unit='ether'):
-    tx_hash = send_eth(amount, address, private_key, unit=unit)
-    return WEB3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
-
-
-def get_address_from_tx_hash(tx_hash, timeout=None):
-    return WEB3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)['contractAddress']
-
-
-def get_abi_from_sol_file(filename, allow_cache=False):
+def get_abi_from_sol_file(filename):
     base_name = os.path.splitext(os.path.basename(filename))[0]
 
     artifact_path = os.path.join(BASE_DIR, 'artifacts', filename)
@@ -356,11 +261,11 @@ def get_abi_from_sol_file(filename, allow_cache=False):
     return compiled_contract['abi']
 
 
-def get_abi_for_contract_version(name, version, allow_cache=False):
+def get_abi_for_contract_version(name, version):
     if version == 'latest':
         version = LATEST_CONTRACTS_VERSION
 
-    return get_abi_from_sol_file('contracts/prod/' + version + '/' + name + '.sol', allow_cache=allow_cache)
+    return get_abi_from_sol_file('contracts/prod/' + version + '/' + name + '.sol')
 
 
 def get_abi_for_event(name, contract):
@@ -387,75 +292,89 @@ def decode_event_args(abi_event, data):
 
 compiled_files_cache = {}
 
-
-def send_deploy_contract_transaction(filename, *contract_constructor_args, private_key, allow_cache=False):
-    contract = compile_contract(filename, allow_cache)
-    account = Account.from_key(private_key)
-
-    log.info("Deploying '%s' with account: %s" % (filename, account.address))
-    nonce = get_nonce_for_address(account.address)
-
-    transaction = contract.constructor(*contract_constructor_args).build_transaction(
-        {'chainId': WEB3.eth.chain_id, 'gas': MAX_GAS_LIMIT, 'gasPrice': Defaults.gas_price,
-         'nonce': nonce})
-
-    signed_txn = WEB3.eth.account.sign_transaction(transaction, private_key=private_key)
-    return WEB3.eth.send_raw_transaction(signed_txn.rawTransaction), contract
+deployer_account = accounts.add(config["wallets"]["from_key"])
+DEPLOYMENT_DATA_FILE = 'deployment_data.json'
 
 
-def compile_contract(filename, allow_cache=False):
-    used_cache = False
-    base_name = os.path.splitext(os.path.basename(filename))[0]
-
-    artifact_path = os.path.join(BASE_DIR, 'artifacts', filename)
-    compiled_file = os.path.join(artifact_path, f"{base_name}.json")
-
-    compiled_file = compiled_file.replace('\\', '/')
-    compiled_file = re.sub(r'(.*contracts/).*/([^/]+)$', r'\1\2', compiled_file)
-
-    with open(compiled_file, 'r') as f:
-        compiled_contract = json.load(f)
-
-    abi = compiled_contract['abi']
-    bytecode = compiled_contract['bytecode']
-    contract = WEB3.eth.contract(abi=abi, bytecode=bytecode)
-
-    return contract
+def get_contract_hash(contract_class, *constructor_args):
+    # Combine the contract's bytecode with a string representation of constructor arguments
+    # Return a hash of the combined bytes
+    return hashlib.sha256(contract_class.bytecode.encode('utf-8') + str(constructor_args).encode()).hexdigest()
 
 
-def deploy_contract_file_and_wait(filename, *contract_constructor_args, private_key, allow_cache=False):
+deployed_contracts_cache = {}
+
+
+def get_cached_contract(contract_name, current_hash):
+    cache_key = f"{contract_name}_{current_hash}"
+    return deployed_contracts_cache.get(cache_key)
+
+
+def cache_contract(contract_name, current_hash, deployed_contract):
+    cache_key = f"{contract_name}_{current_hash}"
+    deployed_contracts_cache[cache_key] = deployed_contract
+
+
+def send_deploy_contract_transaction(filename, *contract_constructor_args, private_key, allow_recycled_contract=False):
+    contract_name = os.path.basename(filename)[:-4]
+    contract_class = globals()[contract_name]
+    current_hash = get_contract_hash(contract_class, *contract_constructor_args)
+
+    # Attempt to retrieve the contract from the cache first
+    cached_contract = get_cached_contract(contract_name, current_hash)
+    if allow_recycled_contract and cached_contract:
+        print(f"Using cached contract: {contract_name} at {cached_contract.address}")
+        setattr(cached_contract.tx, 'is_recycled_contract', True)
+        return cached_contract.tx.txid, cached_contract
+    else:
+        account = accounts.add(private_key)
+        deployed_contract = contract_class.deploy(*contract_constructor_args, {'from': account})
+
+        if allow_recycled_contract:
+            setattr(deployed_contract.tx, 'is_recycled_contract', False)
+            cache_contract(contract_name, current_hash, deployed_contract)
+            print(f"Deployed and saved contract: {contract_name} at {deployed_contract.address}")
+        else:
+            print(f"Deployed contract: {contract_name} at {deployed_contract.address}")
+
+        print(f"Constructor args: {contract_constructor_args}")
+        return deployed_contract.tx.txid, deployed_contract
+
+
+def deploy_contract_file_and_wait(filename, *contract_constructor_args, private_key, allow_recycled_contract=False):
     tx_hash, contract = send_deploy_contract_transaction(filename, *contract_constructor_args, private_key=private_key,
-                                                         allow_cache=allow_cache)
+                                                         allow_recycled_contract=allow_recycled_contract)
+    is_recycled_contract = getattr(contract.tx, 'is_recycled_contract', False)
+    if not is_recycled_contract:
+        contract.tx.wait(1)
 
-    receipt = WEB3.eth.wait_for_transaction_receipt(tx_hash, timeout=None)
-    cost = receipt.gasUsed * WEB3.eth.get_transaction(tx_hash).gasPrice
+    receipt = TransactionReceipt(tx_hash)
 
-    account = Account.from_key(private_key)
     if receipt.status != 1:
+        account = Account.from_key(private_key)
         raise ValueError("Failed to deploy contract %s with account: %s; tx: %s args: %s" % (
-            filename, account.address, receipt.transactionHash.hex(), str(contract_constructor_args)))
+            filename, account.address, tx_hash.hex(), str(contract_constructor_args)))
 
-    address = get_address_from_tx_hash(tx_hash)
-
-    log.info(" - address: " + address)
-
-    eth_contract = EthContract(address, contract.abi, private_key=private_key)
+    eth_contract = EthContract(contract.address, contract.abi, private_key=private_key)
     return eth_contract, AttrDict({'tx_hash': tx_hash,
-                                   'cost': cost,
-                                   'gasUsed': receipt.gasUsed,
+                                   'gasUsed': receipt.gas_used,
                                    'status': receipt.status,
-                                   'contractAddress': receipt.contractAddress,
-                                   'from': receipt['from']})
+                                   'contractAddress': receipt.contract_address,
+                                   'from': receipt.sender,
+                                   'is_recycled_contract': is_recycled_contract})
 
 
-def deploy_test_contract(name, *contract_constructor_args, private_key, allow_cache=True):
+def deploy_test_contract(name, *contract_constructor_args, private_key, allow_recycled_contract=False):
     return deploy_contract_file_and_wait('contracts/test/' + name + '.sol',
-                                         *contract_constructor_args, private_key=private_key, allow_cache=allow_cache)
+                                         *contract_constructor_args, private_key=private_key,
+                                         allow_recycled_contract=allow_recycled_contract)
 
 
-def deploy_contract_version_and_wait(name, version, *contract_constructor_args, private_key, allow_cache=False):
+def deploy_contract_version_and_wait(name, version, *contract_constructor_args, private_key,
+                                     allow_recycled_contract=False):
     return deploy_contract_file_and_wait(get_contract_file_path(name, version),
-                                         *contract_constructor_args, private_key=private_key, allow_cache=allow_cache)
+                                         *contract_constructor_args, private_key=private_key,
+                                         allow_recycled_contract=allow_recycled_contract)
 
 
 def get_contract_file_path(name, version):
@@ -470,18 +389,13 @@ def get_base_file_path(name, version):
     return 'contracts/prod/' + version + '/base/' + name + '.sol'
 
 
-VOTE_DURATION = 60
+VOTE_DURATION = 60 + 3
 EXPIRATION_PERIOD = 5 * 60
 BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL = 60
 
 
-def increase_time(duration, http_provider: HTTPProvider = ETHEREUM_NODE):
-    response = http_provider.make_request("evm_increaseTime", [duration])
-
-    if not response or response.get('error'):
-        raise Exception("Failed to increase time: " + str(response))
-
-    return response
+def increase_time(duration):
+    chain.sleep(duration)
 
 
 class TransactionFailedException(Exception):
@@ -490,7 +404,7 @@ class TransactionFailedException(Exception):
 
 def tx_info(tx_hash, throw_on_error=True):
     try:
-        receipt = WEB3.eth.get_transaction_receipt(tx_hash)
+        receipt = TransactionReceipt(tx_hash)
     except Exception as e:
         if throw_on_error:
             raise e
@@ -500,18 +414,15 @@ def tx_info(tx_hash, throw_on_error=True):
     if not receipt:
         return None
 
-    cost = receipt.gasUsed * WEB3.eth.get_transaction(tx_hash).gasPrice
-
     if throw_on_error and receipt.status != 1:
         raise TransactionFailedException("Transaction failed tx: %s" % tx_hash)
 
     return AttrDict({'tx_hash': tx_hash,
-                     'cost': cost,
-                     'gasUsed': receipt.gasUsed,
+                     'gasUsed': receipt.gas_used,
                      'logs': [AttrDict(rl) for rl in receipt.logs],
                      'status': receipt.status,
-                     'contractAddress': receipt.contractAddress,
-                     'from': receipt['from']})
+                     'contractAddress': receipt.contract_address,
+                     'from': receipt.sender})
 
 
 from web3._utils.events import get_event_data
@@ -569,59 +480,60 @@ def fetch_events(
         yield data
 
 
-CONTRACTS_MANAGER_ABI = get_abi_for_contract_version('ContractsManager', 'latest', allow_cache=True)
-PROPOSAL_CONTRACT_ABI = get_abi_for_contract_version('Proposal', 'latest', allow_cache=True)
+CONTRACTS_MANAGER_ABI = get_abi_for_contract_version('ContractsManager', 'latest')
+PROPOSAL_CONTRACT_ABI = get_abi_for_contract_version('Proposal', 'latest')
 
 
-def tx_receipt(tx_hash):
-    return WEB3.eth.get_transaction_receipt(tx_hash)
-
-
-def deploy_proxy_contract(name, admin, private_key, proxy='MyTransparentUpgradeableProxy'):
-    logic_contract, tx_hash = deploy_contract_version_and_wait(
+def deploy_proxy_contract(name, admin, private_key, proxy='MyTransparentUpgradeableProxy',
+                          allow_recycled_contract=False):
+    logic_contract, info_logic = deploy_contract_version_and_wait(
         name,
         'latest',
         private_key=private_key,
-        allow_cache=True)
-    proxy_contract, proxy_tx_hash = deploy_contract_version_and_wait(
+        allow_recycled_contract=allow_recycled_contract)
+    proxy_contract, info_proxy = deploy_contract_version_and_wait(
         'base/%s' % proxy,
         'latest',
         logic_contract.address,
         *([admin] if admin else []),
         b'',
         private_key=private_key,
-        allow_cache=True)
+        allow_recycled_contract=allow_recycled_contract)
     proxy_contract = EthContract(proxy_contract.address, logic_contract.abi, private_key=private_key)
-    return logic_contract, proxy_contract
+    return logic_contract, proxy_contract, info_proxy['is_recycled_contract']
 
 
 def initial_deploy_gs_contracts(token_name, token_symbol, fm_supply, token_buffer_amount, private_key):
-    contracts_manager_logic, contracts_manager_contract = \
+    contracts_manager_logic, contracts_manager_contract, is_cm_recycled_contract = \
         deploy_proxy_contract('ContractsManager',
                               admin=None,
                               private_key=private_key,
-                              proxy='SelfAdminTransparentUpgradeableProxy')
+                              proxy='SelfAdminTransparentUpgradeableProxy',
+                              allow_recycled_contract=True)
 
     contracts = {
         'Delegates': {'args': []},
         'FundsManager': {'args': []},
-        'TokenSell': {'args': []},
+        'Parameters': {'args': []},
         'Proposal': {'args': [GITSWARM_ACCOUNT_ADDRESS]},
         'GasStation': {'args': []},
         'GitSwarmToken': {'args': [token_name, token_symbol, GS_PROJECT_DB_ID, fm_supply, token_buffer_amount]},
     }
 
     for name, details in contracts.items():
-        logic_contract, proxy_contract = deploy_proxy_contract(name,
-                                                               admin=contracts_manager_contract.address,
-                                                               private_key=private_key)
+        logic_contract, proxy_contract, is_recycled_contract = deploy_proxy_contract(name,
+                                                                                     admin=contracts_manager_contract.address,
+                                                                                     private_key=private_key,
+                                                                                     allow_recycled_contract=name != 'GitSwarmToken')
         contracts[name]['logic'] = logic_contract
         contracts[name]['proxy'] = proxy_contract
+        contracts[name]['is_recycled_contract'] = is_recycled_contract
 
     contracts = {
         'ContractsManager': {'proxy': contracts_manager_contract,
                              'logic': contracts_manager_logic,
-                             'args': []
+                             'args': [],
+                             'is_recycled_contract': is_cm_recycled_contract
                              },
         **contracts}
 
@@ -631,18 +543,18 @@ def initial_deploy_gs_contracts(token_name, token_symbol, fm_supply, token_buffe
     contract_addresses = [
         contracts['Delegates']['proxy'].address,
         contracts['FundsManager']['proxy'].address,
-        contracts['TokenSell']['proxy'].address,
+        contracts['Parameters']['proxy'].address,
         contracts['Proposal']['proxy'].address,
         contracts['GasStation']['proxy'].address,
         contracts['ContractsManager']['proxy'].address,
     ]
     for name, details in contracts.items():
+        if details['is_recycled_contract']:
+            print('Skipping initialize on recycled contract')
+            continue
         details['proxy'].initialize(*details['args'], *contract_addresses, private_key=private_key)
 
     return contracts
-
-
-GS_PROJECT_ID = 0
 
 
 class PatchMixin:
@@ -706,7 +618,3 @@ def hamming_distance(s1, s2):
         return sys.maxsize
 
     return sum(el1 != el2 for el1, el2 in zip(s1, s2))
-
-
-expandable_token = compile_contract(get_contract_file_path('ExpandableSupplyToken', 'latest'), allow_cache=True)
-fixed_supply_token = compile_contract(get_contract_file_path('FixedSupplyToken', 'latest'), allow_cache=True)

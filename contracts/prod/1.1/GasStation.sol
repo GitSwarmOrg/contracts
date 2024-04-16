@@ -23,12 +23,12 @@ contract GasStation is Common, Initializable, IGasStation {
     function initialize(
         address _delegates,
         address _fundsManager,
-        address _tokenSell,
+        address _parameters,
         address _proposal,
         address _gasStation,
         address _contractsManager
     ) public initializer {
-        _init(_delegates, _fundsManager, _tokenSell, _proposal, _gasStation, _contractsManager);
+        _init(_delegates, _fundsManager, _parameters, _proposal, _gasStation, _contractsManager);
     }
 
     function buyGasForProject(uint projectId) payable external {
@@ -45,7 +45,7 @@ contract GasStation is Common, Initializable, IGasStation {
 
     function executeProposal(uint id) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(0, id);
-        uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
+        uint expirationPeriod = parametersContract.parameters(0, keccak256("ExpirationPeriod"));
         require(id < proposalContract.nextProposalId(0), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
         require(endTime + expirationPeriod >= block.timestamp, "Can't execute proposal, execute period has expired");

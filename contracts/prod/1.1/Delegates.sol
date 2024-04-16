@@ -26,12 +26,12 @@ contract Delegates is Common, Initializable, IDelegates {
     function initialize(
         address _delegates,
         address _fundsManager,
-        address _tokenSell,
+        address _parameters,
         address _proposal,
         address _gasStation,
         address _contractsManager
     ) public initializer {
-        _init(_delegates, _fundsManager, _tokenSell, _proposal, _gasStation, _contractsManager);
+        _init(_delegates, _fundsManager, _parameters, _proposal, _gasStation, _contractsManager);
     }
 
     function getDelegatorsOf(uint projectId, address delegatedAddress) view public returns (address[] memory){
@@ -112,7 +112,7 @@ contract Delegates is Common, Initializable, IDelegates {
 
     function removeSpamDelegates(uint projectId, address[] memory addresses, uint[] memory indexes) external {
         uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
-                            proposalContract.parameters(projectId, keccak256("MaxNrOfDelegators"));
+                            parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         for (uint ii = addresses.length; ii > 0; ii--) {
             uint i = ii - 1;
             if (!checkVotingPower(projectId, addresses[i], minimum_amount)) {
@@ -128,7 +128,7 @@ contract Delegates is Common, Initializable, IDelegates {
 
     function getSpamDelegates(uint projectId, address delegatedAddr) external view returns (address [] memory, uint [] memory) {
         uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
-                            proposalContract.parameters(projectId, keccak256("MaxNrOfDelegators"));
+                            parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         address[] storage delegates_array = delegations[projectId][delegatedAddr];
         address[] memory addresses = new address[](250);
         uint[] memory indexes = new uint[](250);

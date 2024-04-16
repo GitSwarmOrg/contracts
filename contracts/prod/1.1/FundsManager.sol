@@ -36,12 +36,12 @@ contract FundsManager is Common, Initializable, IFundsManager {
     function initialize(
         address _delegates,
         address _fundsManager,
-        address _tokenSell,
+        address _parameters,
         address _proposal,
         address _gasStation,
         address _contractsManager
     ) public initializer {
-        _init(_delegates, _fundsManager, _tokenSell, _proposal, _gasStation, _contractsManager);
+        _init(_delegates, _fundsManager, _parameters, _proposal, _gasStation, _contractsManager);
     }
 
     //adds all unretrievable tokens to the GitSwarm project balance
@@ -100,7 +100,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
 
     function executeProposal(uint projectId, uint proposalId) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
-        uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
+        uint expirationPeriod = parametersContract.parameters(0, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
         require(endTime + expirationPeriod >= block.timestamp, "Can't execute proposal, execute period has expired");
@@ -154,29 +154,6 @@ contract FundsManager is Common, Initializable, IFundsManager {
  */
 
     function reclaimFunds(uint projectId, uint votingTokenAmount, address[] memory tokenContractsAddresses) external {
-        ERC20interface votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
-        require(votingTokenContract.allowance(msg.sender, payable(address(this))) >= votingTokenAmount, "insufficient allowance");
-        require(votingTokenAmount <= votingTokenContract.balanceOf(msg.sender), "insufficient balance");
-        uint percentage = votingTokenAmount * PERCENTAGE_MULTIPLIER / contractsManagerContract.votingTokenCirculatingSupply(projectId);
-        uint tokenAmount;
-        uint[] memory sentTokenAmounts = new uint[](tokenContractsAddresses.length);
-        ERC20interface tokenContract;
-        require(votingTokenContract.transferFrom(msg.sender, BURN_ADDRESS, votingTokenAmount), "Token transfer from failed");
-        for (uint i = 0; i < tokenContractsAddresses.length; i++) {
-            if (tokenContractsAddresses[i] != address(votingTokenContract)) {
-                tokenContract = ERC20interface(tokenContractsAddresses[i]);
-                tokenAmount = percentage * balances[projectId][tokenContractsAddresses[i]] / PERCENTAGE_MULTIPLIER;
-                balances[projectId][tokenContractsAddresses[i]] -= tokenAmount;
-                require(tokenContract.transfer(msg.sender, tokenAmount), "Token transfer failed");
-                sentTokenAmounts[i] = tokenAmount;
-            }
-        }
-        uint ethAmount = percentage * balances[projectId][address(0)] / PERCENTAGE_MULTIPLIER;
-        emit DestroyToken(projectId, votingTokenAmount, ethAmount, tokenContractsAddresses, sentTokenAmounts, msg.sender);
-        if (ethAmount > 0) {
-            balances[projectId][address(0)] -= ethAmount;
-            payable(msg.sender).sendValue(ethAmount);
-        }
     }
 
     function sendToken(uint projectId, address tokenAddress, address receiver, uint amount) external restricted(projectId) {

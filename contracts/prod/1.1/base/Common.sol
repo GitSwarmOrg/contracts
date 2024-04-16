@@ -12,7 +12,7 @@ import "../../../openzeppelin-v5.0.1/utils/Address.sol";
 contract Common is Constants {
     IDelegates public delegatesContract;
     IFundsManager public fundsManagerContract;
-    ITokenSell public tokenSellContract;
+    IParameters public parametersContract;
     IProposal public proposalContract;
     IGasStation public gasStationContract;
     IContractsManager public contractsManagerContract;
@@ -27,22 +27,21 @@ contract Common is Constants {
 
 
     modifier restricted(uint projectId) {
-        require(contractsManagerContract.isTrustedAddress(projectId, msg.sender),
-            string.concat("Restricted function ", Strings.toHexString(uint256(uint160(msg.sender)))));
+        require(parametersContract.isTrustedAddress(projectId, msg.sender), "Restricted function ");
         _;
     }
 
     function _init(
         address _delegates,
         address _fundsManager,
-        address _tokenSell,
+        address _parameters,
         address _proposal,
         address _gasStation,
         address _contractsManager
     ) internal {
         delegatesContract = IDelegates(_delegates);
         fundsManagerContract = IFundsManager(_fundsManager);
-        tokenSellContract = ITokenSell(_tokenSell);
+        parametersContract = IParameters(_parameters);
         proposalContract = IProposal(_proposal);
         gasStationContract = IGasStation(_gasStation);
         contractsManagerContract = IContractsManager(_contractsManager);

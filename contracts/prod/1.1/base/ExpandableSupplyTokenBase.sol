@@ -47,13 +47,13 @@ contract ExpandableSupplyTokenBase is ERC20Base {
 
     function executeProposal(uint proposalId) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
-        uint expirationPeriod = proposalContract.parameters(0, keccak256("ExpirationPeriod"));
+        uint expirationPeriod = parametersContract.parameters(0, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
         require(endTime + expirationPeriod >= block.timestamp, "Can't execute proposal, execute period has expired");
         require(willExecute, "Can't execute, proposal was rejected or vote count was not locked");
         proposalContract.setWillExecute(projectId, proposalId, false);
-        uint value = proposalContract.parameters(projectId, keccak256("RequiredVotingPowerPercentageToCreateTokens"));
+        uint value = parametersContract.parameters(projectId, keccak256("RequiredVotingPowerPercentageToCreateTokens"));
         (,, bool checkVotes) = proposalContract.checkVoteCount(projectId, proposalId, value);
         if (typeOfProposal == CREATE_TOKENS) {
             require(checkVotes, "Not enough votes");

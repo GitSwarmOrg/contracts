@@ -5,7 +5,6 @@ import "./ERC20interface.sol";
 
 interface IContractsManager {
     function votingTokenContracts(uint projectId) external view returns (ERC20interface);
-    function changeTrustedAddressProposals(uint projectId, uint proposalId) external view returns (uint32 contractIndex, address trustedAddress);
     function addBurnAddressProposals(uint projectId, uint proposalId) external view returns (address);
     function nextProjectId() external view returns (uint);
     function getBurnAddresses(uint projectId) external view returns (address[] memory);
@@ -13,15 +12,12 @@ interface IContractsManager {
     function votingTokenCirculatingSupply(uint projectId) external view returns (uint);
     function createProject(string memory dbProjectId, address tokenContractAddress) external;
     function createProject(string memory dbProjectId, address tokenContractAddress, bool checkErc20) external;
-    function isTrustedAddress(uint projectId, address trustedAddress) external view returns (bool);
-    function proposeChangeTrustedAddress(uint projectId, uint32 contractIndex, address trustedAddress) external;
     function proposeAddBurnAddress(uint projectId, address burnAddress) external;
     function executeProposal(uint projectId, uint proposalId) external;
     function hasMinBalance(uint projectId, address addr) external view returns (bool);
     function minimumRequiredAmount(uint projectId) external view returns (uint);
 
     function burnAddresses(uint projectId, uint index) external view returns (address);
-    function trustedAddresses(uint projectId, uint index) external view returns (address);
 }
 
 interface IDelegates {
@@ -64,38 +60,33 @@ interface IGasStation {
 
 interface IProposal {
     function proposals(uint, uint) external view returns (uint32, bool, bool, uint64, uint);
-    function changeParameterProposals(uint, uint) external view returns (bytes32, uint);
     function nextProposalId(uint) external view returns (uint);
-    function parameters(uint, bytes32) external view returns (uint);
-    function initializeParameters(uint) external;
     function getVotes(uint, uint, address) external view returns (bool, bool);
     function setActive(uint, uint, bool) external;
     function setWillExecute(uint, uint, bool) external;
     function hasVotedAlready(uint, uint, address) external view returns (bool);
     function vote(uint, uint, bool) external;
+    function internal_vote(uint, uint, bool) external;
     function deleteProposal(uint, uint) external;
-    function contestProposal(uint projectId, uint proposalId, bool doRecount) external returns (bool);
-    function neededToContest(uint) external view returns (uint);
     function createProposal(uint, uint32, address) external;
     function checkVoteCount(uint, uint, uint) external view returns (uint, uint, bool);
     function lockVoteCount(uint, uint) external;
-    function proposeParameterChange(uint, bytes32, uint) external;
-    function executeProposal(uint, uint) external;
     function getVoteCount(uint, uint) external view returns (uint, uint);
     function getDelegatedVotingPowerExcludingVoters(uint, address, uint,  ERC20interface) external view returns (uint);
     function calculateTotalVotingPower(uint, address, uint, ERC20interface) external view returns (uint);
-    function gitswarmAddress() external view returns (address);
-    function getSpamVoters(uint, uint) external view returns (uint[] memory);
-    function removeSpamVoters(uint, uint, uint[] memory) external;
 }
 
-interface ITokenSell {
-    function proposeAuctionTokenSell(uint projectId, address tokenToSell, uint nbOfTokens, uint minimumWei, uint64 auctionStartTime, uint64 auctionEndTime) external;
-    function executeProposal(uint projectId, uint proposalId) external;
-    function buyAuction(uint projectId, uint proposalId) payable external;
-    function withdrawAuction(uint projectId, uint proposalId, uint withdrawAmount) external;
-    function auctionAmountForBuyer(uint projectId, uint proposalId, address addr) external view returns (uint);
-    function claimAuction(uint projectId, uint proposalId) external;
-    function massClaimAuction(uint projectId, uint proposalId, address[] memory claimers) external;
-    function sendAuctionTokensBack(uint projectId, uint proposalId) external;
+interface IParameters {
+    function changeParameterProposals(uint, uint) external view returns (bytes32, uint);
+    function parameters(uint, bytes32) external view returns (uint);
+    function initializeParameters(uint) external;
+    function neededToContest(uint) external view returns (uint);
+    function contestProposal(uint projectId, uint proposalId, bool doRecount) external returns (bool);
+    function proposeParameterChange(uint, bytes32, uint) external;
+    function executeProposal(uint, uint) external;
+    function gitswarmAddress() external view returns (address);
+    function isTrustedAddress(uint projectId, address trustedAddress) external view returns (bool);
+    function proposeChangeTrustedAddress(uint projectId, uint32 contractIndex, address trustedAddress) external;
+    function trustedAddresses(uint projectId, uint index) external view returns (address);
+    function changeTrustedAddressProposals(uint projectId, uint proposalId) external view returns (uint32 contractIndex, address trustedAddress);
 }

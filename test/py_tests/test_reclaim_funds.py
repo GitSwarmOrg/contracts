@@ -1,5 +1,9 @@
+from brownie.network.transaction import TransactionReceipt
+from web3 import Web3
+from web3.types import Gwei
+
 from test.py_tests.tests import EthBaseTest
-from utils import WEB3, deploy_test_contract, Defaults, deploy_contract_version_and_wait, GS_PROJECT_ID, \
+from utils import Defaults, deploy_contract_version_and_wait, \
     INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY
 
 
@@ -8,7 +12,8 @@ class ReclaimFundsTests(EthBaseTest):
 
     def setUp(self):
         super().setUp()
-        self.neptune_token_contract, neptune_token_tx_hash = deploy_contract_version_and_wait('ExpandableSupplyToken', 'latest',
+        self.neptune_token_contract, neptune_token_tx_hash = deploy_contract_version_and_wait('ExpandableSupplyToken',
+                                                                                              'latest',
                                                                                               'PROJ_DB_ID',
                                                                                               10000 * self.DECIMALS,
                                                                                               1000 * self.DECIMALS,
@@ -16,10 +21,10 @@ class ReclaimFundsTests(EthBaseTest):
                                                                                               self.fundsManagerContract.address,
                                                                                               self.proposalContract.address,
                                                                                               'Neptune', 'NP',
-                                                                                              private_key=self.private_key,
-                                                                                              allow_cache=True)
+                                                                                              private_key=self.private_key)
 
-        self.saturn_token_contract, saturn_token_tx_hash = deploy_contract_version_and_wait('ExpandableSupplyToken', 'latest',
+        self.saturn_token_contract, saturn_token_tx_hash = deploy_contract_version_and_wait('ExpandableSupplyToken',
+                                                                                            'latest',
                                                                                             'PROJ_DB_ID2',
                                                                                             10000 * self.DECIMALS,
                                                                                             1000 * self.DECIMALS,
@@ -27,8 +32,7 @@ class ReclaimFundsTests(EthBaseTest):
                                                                                             self.fundsManagerContract.address,
                                                                                             self.proposalContract.address,
                                                                                             'Saturn', 'ST',
-                                                                                            private_key=self.private_key,
-                                                                                            allow_cache=True)
+                                                                                            private_key=self.private_key)
 
         self.create_test_account()
         self.create_test_account(token_amount=75 * self.DECIMALS)
@@ -36,31 +40,30 @@ class ReclaimFundsTests(EthBaseTest):
     def test_reclaim_funds(self):
         self.neptune_token_contract.approve(self.fundsManagerContract.address, 100 * self.DECIMALS,
                                             private_key=self.private_key)
-        self.fundsManagerContract.depositToken(GS_PROJECT_ID, self.neptune_token_contract.address, 100 * self.DECIMALS)
-        self.assertEqual(self.fundsManagerContract.balances(GS_PROJECT_ID, self.neptune_token_contract.address),
+        self.fundsManagerContract.depositToken(self.p_id, self.neptune_token_contract.address, 100 * self.DECIMALS)
+        self.assertEqual(self.fundsManagerContract.balances(self.p_id, self.neptune_token_contract.address),
                          100 * self.DECIMALS)
         self.saturn_token_contract.approve(self.fundsManagerContract.address, 200 * self.DECIMALS,
                                            private_key=self.private_key)
-        self.fundsManagerContract.depositToken(GS_PROJECT_ID, self.saturn_token_contract.address, 200 * self.DECIMALS)
+        self.fundsManagerContract.depositToken(self.p_id, self.saturn_token_contract.address, 200 * self.DECIMALS)
 
-        self.fundsManagerContract.depositEth(GS_PROJECT_ID, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
+        self.fundsManagerContract.depositEth(self.p_id, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
                                              wei=1 * 10 ** 18)
         self.tokenContract.approve(self.fundsManagerContract.address, 50 * self.DECIMALS,
-                                   private_key=self.accounts[1].key)
+                                   private_key=self.accounts[1].private_key)
 
-        eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
+        eth_balance_before = self.accounts[1].balance()
 
         tokenContractsAddresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
 
-        tx = self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, tokenContractsAddresses,
-                                                    private_key=self.accounts[1].key)
+        tx = self.fundsManagerContract.reclaimFunds(self.p_id, 50 * self.DECIMALS, tokenContractsAddresses,
+                                                    private_key=self.accounts[1].private_key)
 
-        gas_used = WEB3.eth.get_transaction_receipt(tx).gasUsed
+        gas_used = TransactionReceipt(tx).gas_used
 
-        eth_balance_after = WEB3.eth.get_balance(self.accounts[1].address)
-
-        self.assertEqual(gas_used * Defaults.gas_price + eth_balance_after - eth_balance_before, 50 * 10 ** 16)
-        self.assertEqual(WEB3.eth.get_balance(self.fundsManagerContract.address), 50 * 10 ** 16)
+        eth_balance_after = self.accounts[1].balance()
+        self.assertEqual(gas_used * Web3.to_wei(10, 'gwei') + eth_balance_after - eth_balance_before, 50 * 10 ** 16)
+        self.assertEqual(self.fundsManagerContract.balance(), 50 * 10 ** 16)
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), 25 * self.DECIMALS)
         self.assertEqual(self.neptune_token_contract.balanceOf(self.accounts[1].address), 50 * self.DECIMALS)
         self.assertEqual(self.saturn_token_contract.balanceOf(self.accounts[1].address), 100 * self.DECIMALS)
@@ -72,43 +75,43 @@ class ReclaimFundsTests(EthBaseTest):
                                             private_key=self.private_key)
 
         self.tokenContract.transfer(self.fundsManagerContract.address, 75 * self.DECIMALS,
-                                    private_key=self.accounts[1].key)
+                                    private_key=self.accounts[1].private_key)
 
-        eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
+        eth_balance_before = self.accounts[1].balance()
 
         token_contracts_addresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
         self.tokenContract.approve(self.fundsManagerContract.address, 20000 * self.DECIMALS,
-                                   private_key=self.accounts[1].key)
+                                   private_key=self.accounts[1].private_key)
         funds_manager_balance = self.tokenContract.balanceOf(self.fundsManagerContract.address)
         try:
-            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, token_contracts_addresses,
-                                                   private_key=self.accounts[1].key)
+            self.fundsManagerContract.reclaimFunds(self.p_id, 50 * self.DECIMALS, token_contracts_addresses,
+                                                   private_key=self.accounts[1].private_key)
             self.fail()
         except Exception as e:
             self.assertIn("insufficient balance", str(e))
 
-        self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
+        self.assertTrue(self.accounts[1].balance() <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), 0)
         self.assertEqual(self.neptune_token_contract.balanceOf(self.accounts[1].address), 0)
         self.assertEqual(self.saturn_token_contract.balanceOf(self.accounts[1].address), 0)
 
     def test_reclaim_funds_for_token_contracts_for_which_fm_has_no_balance(self):
-        self.fundsManagerContract.depositEth(GS_PROJECT_ID, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
+        self.fundsManagerContract.depositEth(self.p_id, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
                                              wei=1 * 10 ** 18)
 
         tokenContractsAddresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
-        eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
+        eth_balance_before = self.accounts[1].balance()
 
         funds_manager_balance = self.tokenContract.balanceOf(self.fundsManagerContract.address)
         try:
-            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, tokenContractsAddresses,
-                                                   private_key=self.accounts[1].key)
+            self.fundsManagerContract.reclaimFunds(self.p_id, 50 * self.DECIMALS, tokenContractsAddresses,
+                                                   private_key=self.accounts[1].private_key)
             self.fail()
         except Exception as e:
             self.assertIn("insufficient allowance", str(e))
 
-        self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
+        self.assertTrue(self.accounts[1].balance() <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), 75 * self.DECIMALS)
         self.assertEqual(self.neptune_token_contract.balanceOf(self.accounts[1].address), 0)
@@ -119,22 +122,22 @@ class ReclaimFundsTests(EthBaseTest):
                                              private_key=self.private_key)
         self.saturn_token_contract.transfer(self.fundsManagerContract.address, 200 * self.DECIMALS,
                                             private_key=self.private_key)
-        self.fundsManagerContract.depositEth(GS_PROJECT_ID, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
+        self.fundsManagerContract.depositEth(self.p_id, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
                                              wei=1 * 10 ** 18)
 
-        eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
+        eth_balance_before = self.accounts[1].balance()
         funds_manager_balance = self.tokenContract.balanceOf(self.fundsManagerContract.address)
 
         tokenContractsAddresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
 
         try:
-            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, tokenContractsAddresses,
-                                                   private_key=self.accounts[1].key)
+            self.fundsManagerContract.reclaimFunds(self.p_id, 50 * self.DECIMALS, tokenContractsAddresses,
+                                                   private_key=self.accounts[1].private_key)
             self.fail()
         except Exception as e:
             self.assertIn("insufficient allowance", str(e))
 
-        self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
+        self.assertTrue(self.accounts[1].balance() <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), 75 * self.DECIMALS)
         self.assertEqual(self.neptune_token_contract.balanceOf(self.accounts[1].address), 0)
@@ -145,26 +148,26 @@ class ReclaimFundsTests(EthBaseTest):
                                              private_key=self.private_key)
         self.saturn_token_contract.transfer(self.fundsManagerContract.address, 200 * self.DECIMALS,
                                             private_key=self.private_key)
-        self.fundsManagerContract.depositEth(GS_PROJECT_ID, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
+        self.fundsManagerContract.depositEth(self.p_id, private_key=INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY,
                                              wei=1 * 10 ** 18)
         self.tokenContract.approve(self.fundsManagerContract.address, 50 * self.DECIMALS,
-                                   private_key=self.accounts[1].key)
+                                   private_key=self.accounts[1].private_key)
         self.tokenContract.transfer(self.accounts[0].address, 50 * self.DECIMALS,
-                                    private_key=self.accounts[1].key)
+                                    private_key=self.accounts[1].private_key)
 
-        eth_balance_before = WEB3.eth.get_balance(self.accounts[1].address)
+        eth_balance_before = self.accounts[1].balance()
         funds_manager_balance = self.tokenContract.balanceOf(self.fundsManagerContract.address)
 
         token_contracts_addresses = [self.neptune_token_contract.address, self.saturn_token_contract.address]
 
         try:
-            self.fundsManagerContract.reclaimFunds(GS_PROJECT_ID, 50 * self.DECIMALS, token_contracts_addresses,
-                                                   private_key=self.accounts[1].key)
+            self.fundsManagerContract.reclaimFunds(self.p_id, 50 * self.DECIMALS, token_contracts_addresses,
+                                                   private_key=self.accounts[1].private_key)
             self.fail()
         except Exception as e:
             self.assertIn("insufficient balance", str(e))
 
-        self.assertTrue(WEB3.eth.get_balance(self.accounts[1].address) <= eth_balance_before)
+        self.assertTrue(self.accounts[1].balance() <= eth_balance_before)
         self.assertEqual(self.tokenContract.balanceOf(self.fundsManagerContract.address), funds_manager_balance)
         self.assertEqual(self.tokenContract.balanceOf(self.accounts[1].address), 25 * self.DECIMALS)
         self.assertEqual(self.neptune_token_contract.balanceOf(self.accounts[1].address), 0)
