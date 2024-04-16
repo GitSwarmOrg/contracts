@@ -1,13 +1,10 @@
 Solidity contracts used on the [GitSwarm.com](https://gitswarm.com/) platform
 
-Tested using Hardhat 2.20.1 and pytest 7.4.0.
+Tested using Hardhat 2.22.2 and solidity-coverage 0.8.12.
 
 ## Notes
-The `requirements.txt` file lists all the Python dependencies. Install them by running:
 
-```pip install -r requirements.txt```
-
-To install [Hardhat](https://hardhat.org/hardhat-runner/docs/getting-started#installation), run
+To install [Hardhat](https://hardhat.org/hardhat-runner/docs/getting-started#installation) and other requirements, run
 
 ```bash 
 npm i
@@ -22,7 +19,7 @@ and run the hardhat node using
 npx hardhat node
 ```
 
-The python tests can be run using
+While the node is running, run the coverage tests by using
 ```bash
-pytest test/py_tests/
+npx hardhat coverage
 ```
