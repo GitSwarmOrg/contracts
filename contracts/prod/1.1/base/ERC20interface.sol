@@ -3,6 +3,12 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
+/**
+ * @title ERC20 Token Standard Interface
+ * @dev Defines the standard functions for an ERC20 token, enabling interoperability across different platforms and contracts.
+ * This interface facilitates the implementation of a standard API for tokens within smart contracts.
+ * This contract serves as a foundation for the ERC20Base contract.
+ */
 interface ERC20interface {
     function decimals() external view returns (uint dec);
 

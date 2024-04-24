@@ -8,9 +8,13 @@ import "./base/ERC20Base.sol";
 import "./Proposal.sol";
 import "./base/ExpandableSupplyTokenBase.sol";
 
-// This is an upgradable token that we deploy along with the other contracts.
-// This is the contract we use for our GitSwarm token.
-contract GitSwarmToken is ExpandableSupplyTokenBase, Initializable {
+/**
+ * @title Upgradable Token Contract
+ * @dev This is an upgradable token that we deploy along with
+ * the other initially deployed contracts.
+ * This is the contract we use for our GitSwarm token.
+ */
+contract UpgradableToken is ExpandableSupplyTokenBase, Initializable {
 
     function initialize(
         string memory tokenName,

@@ -8,9 +8,29 @@ import "./base/ERC20Base.sol";
 import "./base/ExpandableSupplyTokenBase.sol";
 //import "hardhat/console.sol";
 
-// We deploy this contract when a user creates a new token
-// and they want to be able to increase the supply later.
+/**
+ * @title Expandable Supply Token
+ * @dev Implementation of an ERC20 token with expandable supply.
+ * This contract allows for the supply of tokens to be increased after deployment,
+ * intended for projects that may require additional token issuance post-launch.
+ * The initial supply is allocated upon contract creation, with a portion designated for the creator.
+ * The supply can be expanded by authorized addresses as defined by the contract's logic.
+ */
 contract ExpandableSupplyToken is ExpandableSupplyTokenBase {
+    /**
+     * @param prjId The project ID for the new token.
+     * @param supply The total fixed supply of the token.
+     * @param creatorSupply The portion of the supply allocated to the creator.
+     * @param contractsManagerAddress Address of the Contracts Manager.
+     * @param fundsManagerContractAddress Address of the Funds Manager Contract.
+     * @param proposalContractAddress Address of the Proposal Contract.
+     * @param tokenName The name of the token.
+     * @param tokenSymbol The symbol of the token.
+     *
+     * Requirements:
+     * - `creatorSupply` must be non-zero.
+     * - Contract must have no pre-existing supply (`__totalSupply` == 0).
+     */
     constructor(
         string memory prjId,
         uint supply,
@@ -18,13 +38,13 @@ contract ExpandableSupplyToken is ExpandableSupplyTokenBase {
         address contractsManagerAddress,
         address fundsManagerContractAddress,
         address proposalContractAddress,
+        address parametersContractAddress,
         string memory tokenName,
         string memory tokenSymbol
     ) {
-        require(creatorSupply != 0 && 0 == __totalSupply);
         name = tokenName;
         symbol = tokenSymbol;
-        _init(address(0), fundsManagerContractAddress, address(0), proposalContractAddress, address(0), contractsManagerAddress);
+        _init(address(0), fundsManagerContractAddress, parametersContractAddress, proposalContractAddress, address(0), contractsManagerAddress);
         contractsManagerContract.createProject(prjId, address(this), false);
         createInitialTokens(supply, creatorSupply);
     }

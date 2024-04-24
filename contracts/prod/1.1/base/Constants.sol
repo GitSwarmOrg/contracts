@@ -3,11 +3,16 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
+/**
+ * @title Constants for GitSwarm
+ * @notice Defines immutable constants used across the GitSwarm contracts.
+ * These include addresses and numerical codes representing various proposal types.
+ */
 contract Constants {
 
     address constant public BURN_ADDRESS = 0x1111111111111111111111111111111111111111;
 
-    // Proposal types
+    /// Proposal types
     uint32 constant public TRANSACTION = 1;
     uint32 constant public RECURRING_TRANSACTION = 2;
     uint32 constant public CREATE_TOKENS = 3;
