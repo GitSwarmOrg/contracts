@@ -5,6 +5,11 @@ pragma solidity 0.8.20;
 
 import "./base/Common.sol";
 
+/**
+ * @title Parameters
+ * @notice This contract manages the parameters and trusted addresses for projects.
+ * It allows for proposing and executing changes to parameters and trusted addresses.
+ */
 contract Parameters is Common, Initializable, IParameters {
 
     /**
@@ -86,17 +91,6 @@ contract Parameters is Common, Initializable, IParameters {
      * @param who The address of the GitSwarm being removed.
      */
     event GitSwarmAddressRemoved(address who);
-
-    /**
-     * @notice Emitted when a proposal is successfully contested, which happens when:
-     * - there are more no votes than yes votes or
-     * - the VetoMinimumPercentage (percentage of circulating supply) has been met
-     * @param projectId The ID of the project for which the proposal is made.
-     * @param proposalId The ID of the contested proposal.
-     * @param yesVotes The total number of yes votes the proposal received before being contested.
-     * @param noVotes The total number of no votes the proposal received before being contested.
-     */
-    event ContestedProposal(uint projectId, uint proposalId, uint yesVotes, uint noVotes);
 
     /**
      * @notice Initializes the contract with necessary addresses and setups
