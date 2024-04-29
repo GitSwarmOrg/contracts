@@ -19,3 +19,25 @@ Run the coverage tests by using
 ```bash
 npx hardhat coverage
 ```
+
+## Deploy
+Deploy script can be found in the `scripts` folder.
+
+Rename `./.env.example` to `./.env` in the project root.
+To add the private key of a deployer account, assign the following variables
+```
+PRIVATE_KEY=...
+```
+To deploy, run 
+```bash
+$ npm run deploy -- <<network>>
+```
+
+For example, you can connect to a node on localhost using:  
+```bash
+$ npm run deploy -- localhost
+```
+
+For other networks they must be listed in hardhat.config.ts under networks.
+
+

@@ -125,8 +125,8 @@ describe("ContractsManager", function () {
 
 
     it("should upgrade contracts", async function () {
-        const parametersLogicContract = await deployContractAndWait("contracts/test/Parameters2");
-        const contractsManagerLogicContract = await deployContractAndWait("contracts/test/ContractsManager2");
+        const parametersLogicContract = await deployContractAndWait({contractNameOrPath: "contracts/test/Parameters2"});
+        const contractsManagerLogicContract = await deployContractAndWait({contractNameOrPath: "contracts/test/ContractsManager2"});
         await c.contractsManagerContract.proposeUpgradeContracts(
             ethers.ZeroAddress,
             ethers.ZeroAddress,
@@ -285,12 +285,12 @@ describe("ContractsManager", function () {
     });
 
     it("should cover isERC20Token", async function () {
-        let [Broken_ERC20_Missing_name] = await deployContractAndWait('artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_name.json')
-        let [Broken_ERC20_Missing_symbol] = await deployContractAndWait('artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_symbol.json')
-        let [Broken_ERC20_Missing_decimals] = await deployContractAndWait('artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_decimals.json')
-        let [Broken_ERC20_Missing_totalSupply] = await deployContractAndWait('artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_totalSupply.json')
-        let [Broken_ERC20_Missing_balanceOf] = await deployContractAndWait('artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_balanceOf.json')
-        let [Broken_ERC20_Missing_allowance] = await deployContractAndWait('artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_allowance.json')
+        let [Broken_ERC20_Missing_name] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_name.json'})
+        let [Broken_ERC20_Missing_symbol] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_symbol.json'})
+        let [Broken_ERC20_Missing_decimals] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_decimals.json'})
+        let [Broken_ERC20_Missing_totalSupply] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_totalSupply.json'})
+        let [Broken_ERC20_Missing_balanceOf] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_balanceOf.json'})
+        let [Broken_ERC20_Missing_allowance] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_allowance.json'})
 
         expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_name)).to.be.false;
         expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_symbol)).to.be.false;

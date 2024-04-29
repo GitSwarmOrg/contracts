@@ -21,35 +21,37 @@ describe("FundsManagerTests", function () {
     beforeEach(async function () {
         await c.resetProjectAndAccounts({createAccounts: false});
 
-        [neptuneTokenContract] = await deployContractAndWait(
-            "ExpandableSupplyToken",
-            "PROJ_DB_ID",
-            10000n * DECIMALS,
-            1000n * DECIMALS,
-            await c.contractsManagerContract.getAddress(),
-            await c.fundsManagerContract.getAddress(),
-            await c.proposalContract.getAddress(),
-            await c.parametersContract.getAddress(),
-            "Neptune",
-            "NP"
+        [neptuneTokenContract] = await deployContractAndWait({
+                contractNameOrPath: "ExpandableSupplyToken",
+                deployArgs: ["PROJ_DB_ID",
+                    10000n * DECIMALS,
+                    1000n * DECIMALS,
+                    await c.contractsManagerContract.getAddress(),
+                    await c.fundsManagerContract.getAddress(),
+                    await c.proposalContract.getAddress(),
+                    await c.parametersContract.getAddress(),
+                    "Neptune",
+                    "NP"]
+            }
         );
 
 
         neptuneTokenContract = neptuneTokenContract.connect(new NonceManager(signer))
 
-        let aa = await deployContractAndWait(
-            "ExpandableSupplyToken",
-            "PROJ_DB_ID2",
-            10000n * DECIMALS,
-            1000n * DECIMALS,
-            await c.contractsManagerContract.getAddress(),
-            await c.fundsManagerContract.getAddress(),
-            await c.proposalContract.getAddress(),
-            await c.parametersContract.getAddress(),
-            "Saturn",
-            "ST"
+        let saturnDeployment = await deployContractAndWait({
+                contractNameOrPath: "ExpandableSupplyToken",
+                deployArgs: ["PROJ_DB_ID2",
+                    10000n * DECIMALS,
+                    1000n * DECIMALS,
+                    await c.contractsManagerContract.getAddress(),
+                    await c.fundsManagerContract.getAddress(),
+                    await c.proposalContract.getAddress(),
+                    await c.parametersContract.getAddress(),
+                    "Saturn",
+                    "ST"]
+            }
         );
-        saturnTokenContract = aa[0].connect(new NonceManager(signer))
+        saturnTokenContract = saturnDeployment[0].connect(new NonceManager(signer))
 
         await c.createTestAccount();
         await c.createTestAccount({tokenAmount: 75n * DECIMALS});
@@ -186,17 +188,19 @@ describe("FundsManagerTests", function () {
     });
 
     it("should send orphan tokens to GitSwarm", async function () {
-        const orphanTokenContract = await deployContractAndWait(
-            "ExpandableSupplyToken",
-            "ORPHAN_TOKEN",
-            10000n * DECIMALS,
-            1000n * DECIMALS,
-            await c.contractsManagerContract.getAddress(),
-            await c.fundsManagerContract.getAddress(),
-            await c.proposalContract.getAddress(),
-            await c.parametersContract.getAddress(),
-            "Orphan",
-            "ORP"
+        const orphanTokenContract = await deployContractAndWait({
+                contractNameOrPath: "ExpandableSupplyToken",
+                deployArgs: [
+                    "ORPHAN_TOKEN",
+                    10000n * DECIMALS,
+                    1000n * DECIMALS,
+                    await c.contractsManagerContract.getAddress(),
+                    await c.fundsManagerContract.getAddress(),
+                    await c.proposalContract.getAddress(),
+                    await c.parametersContract.getAddress(),
+                    "Orphan",
+                    "ORP"]
+            }
         );
 
         await orphanTokenContract[0].transfer(await c.fundsManagerContract.getAddress(), 500n * DECIMALS);
@@ -405,33 +409,36 @@ describe("FundsManagerTests", function () {
     });
 
     async function deployFailTransferContract() {
-        [failTransferContract] = await deployContractAndWait(
-            "contracts/test/ERC20FailTransfer",
-            "PROJ_DB_ID",
-            10000n * DECIMALS,
-            1000n * DECIMALS,
-            await c.contractsManagerContract.getAddress(),
-            await c.fundsManagerContract.getAddress(),
-            await c.proposalContract.getAddress(),
-            await c.parametersContract.getAddress(),
-            "Fail32",
-            "FFF"
-        );
+        [failTransferContract] = await deployContractAndWait({
+            contractNameOrPath: "contracts/test/ERC20FailTransfer",
+            deployArgs: ["PROJ_DB_ID",
+                10000n * DECIMALS,
+                1000n * DECIMALS,
+                await c.contractsManagerContract.getAddress(),
+                await c.fundsManagerContract.getAddress(),
+                await c.proposalContract.getAddress(),
+                await c.parametersContract.getAddress(),
+                "Fail32",
+                "FFF"
+            ]
+        });
     }
 
     async function deployFailTransferFromContract() {
-        [failTransferFromContract] = await deployContractAndWait(
-            "contracts/test/ERC20FailTransferFrom",
-            "PROJ_DB_ID",
-            10000n * DECIMALS,
-            1000n * DECIMALS,
-            await c.contractsManagerContract.getAddress(),
-            await c.fundsManagerContract.getAddress(),
-            await c.proposalContract.getAddress(),
-            await c.parametersContract.getAddress(),
-            "Fail32",
-            "FFF"
-        );
+        [failTransferFromContract] = await deployContractAndWait({
+            contractNameOrPath: "contracts/test/ERC20FailTransferFrom",
+            deployArgs: [
+                "PROJ_DB_ID",
+                10000n * DECIMALS,
+                1000n * DECIMALS,
+                await c.contractsManagerContract.getAddress(),
+                await c.fundsManagerContract.getAddress(),
+                await c.proposalContract.getAddress(),
+                await c.parametersContract.getAddress(),
+                "Fail32",
+                "FFF"
+            ]
+        });
     }
 
     it("should fail to reclaim funds with token transfer failure", async function () {

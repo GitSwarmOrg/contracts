@@ -34,7 +34,7 @@ describe("expandable supply token", function () {
     }
 
     it("should create non-zero supply with failure", async function () {
-        await expect(deployContractAndWait("contracts/test/ExpandableSupplyTokenNonZeroBase")).to.be.reverted;
+        await expect(deployContractAndWait({contractNameOrPath: "contracts/test/ExpandableSupplyTokenNonZeroBase"})).to.be.reverted;
     });
 
     it("should test CREATE_TOKENS proposal", async function () {

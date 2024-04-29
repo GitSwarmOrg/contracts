@@ -38,8 +38,15 @@ export async function increaseTime(seconds: number) {
 }
 
 export async function deployContractAndWait(
-    contractNameOrPath: string,
-    ...deployArgs: any[]
+    {
+        contractNameOrPath,
+        deployer = null,
+        deployArgs = [],
+    }: {
+        contractNameOrPath: string;
+        deployer?: any;
+        deployArgs?: any[];
+    }
 ) {
     let basePath = '';
     let contractName = contractNameOrPath;
@@ -62,9 +69,9 @@ export async function deployContractAndWait(
     }
 
     const artifact = JSON.parse(fs.readFileSync(artifactsPath, 'utf8'));
-    const contractFactory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, new NonceManager(signer));
+    const contractFactory = new ethers.ContractFactory(artifact.abi, artifact.bytecode, new NonceManager(deployer || signer));
 
-    console.log(`Deploying ${contractName} with args ${JSON.stringify(deployArgs, bigIntSerializer)}...`);
+    console.log(`Deploying ${contractName} with args ${JSON.stringify(deployArgs, bigIntSerializer)}`);
     const contract = await contractFactory.deploy(...deployArgs);
     await contract.waitForDeployment();
     let address = await contract.getAddress();
@@ -78,24 +85,32 @@ export async function deployContractAndWait(
     return [contract, deploymentInfo, artifact.abi];
 }
 
-export async function deployProxyContract(
-    name: string,
-    admin: string | null,
-    proxy: string = "MyTransparentUpgradeableProxy",
+export async function deployProxyContract({
+                                              name,
+                                              admin = null,
+                                              proxy = "MyTransparentUpgradeableProxy",
+                                              deployer = signer
+                                          }: {
+                                              name: string;
+                                              admin?: string | null;
+                                              proxy?: string;
+                                              deployer?: any;
+                                          }
 ) {
-    const [logicContract,, abiLogic] = await deployContractAndWait(
-        name,
-    );
+    const [logicContract, , abiLogic] = await deployContractAndWait(
+        {contractNameOrPath: name, deployer});
 
     const proxyContractArgs = admin ? [admin] : [];
-    const [proxyContract] = await deployContractAndWait(
-        `base/${proxy}`,
-        await logicContract.getAddress(),
-        ...proxyContractArgs,
-        "0x"
+    const [proxyContract] = await deployContractAndWait({
+            contractNameOrPath: `base/${proxy}`,
+            deployer,
+            deployArgs: [await logicContract.getAddress(),
+                ...proxyContractArgs,
+                "0x"]
+        }
     );
 
-    const proxyWithSigner = new ethers.Contract(await proxyContract.getAddress(), abiLogic, signer);
+    const proxyWithSigner = new ethers.Contract(await proxyContract.getAddress(), abiLogic, deployer);
 
     return [logicContract, proxyWithSigner];
 }
@@ -122,11 +137,13 @@ export async function initialDeployGsContracts(
     tokenSymbol: string,
     fmSupply: BigInt,
     tokenBufferAmount: BigInt,
+    deployer = undefined,
 ): Promise<Contracts> {
-    const [contractsManagerLogic, contractsManagerContract] = await deployProxyContract(
-        "ContractsManager",
-        null,
-        "SelfAdminTransparentUpgradeableProxy"
+    const [contractsManagerLogic, contractsManagerContract] = await deployProxyContract({
+            name: "ContractsManager",
+            deployer,
+            proxy: "SelfAdminTransparentUpgradeableProxy"
+        }
     );
 
     let contracts: Partial<Contracts> = {
@@ -139,9 +156,11 @@ export async function initialDeployGsContracts(
     };
 
     for (const [name, details] of Object.entries(contracts)) {
-        const [logicContract, proxyContract] = await deployProxyContract(
-            name,
-            await contractsManagerContract.getAddress(),
+        const [logicContract, proxyContract] = await deployProxyContract({
+                name,
+                admin: await contractsManagerContract.getAddress(),
+                deployer
+            }
         );
         contracts[name as keyof Contracts] = {logic: logicContract, proxy: proxyContract, ...details};
     }
@@ -177,7 +196,6 @@ export async function initialDeployGsContracts(
         console.log(`calling initialize on ${name} with details ${JSON.stringify(Object.keys(details), bigIntSerializer)} |||| ${JSON.stringify([...(details.args || []), ...contractAddresses], bigIntSerializer)}`)
         const tx = await details.proxy.initialize(...(details.args || []), ...contractAddresses);
         await tx.wait(); // Wait for the transaction to be mined
-        console.log(`called initialize`)
     }
 
     return contracts as Contracts;
@@ -260,17 +278,18 @@ export class TestBase {
     async resetProjectAndAccounts({createAccounts = true, tokenContract = 'FixedSupplyToken'} = {}) {
         this.accounts = []
         this.pId = await this.contractsManagerContract.nextProjectId();
-        [this.tokenContract] = await deployContractAndWait(
-            tokenContract,
-            'PROJECT_ID',
-            TestBase.fmSupply,
-            TestBase.tokenBufferAmount,
-            await this.contractsManagerContract.getAddress(),
-            await this.fundsManagerContract.getAddress(),
-            await this.proposalContract.getAddress(),
-            await this.parametersContract.getAddress(),
-            "GitSwarm",
-            "GS",
+        [this.tokenContract] = await deployContractAndWait({
+                contractNameOrPath: tokenContract,
+                deployArgs: ['PROJECT_ID',
+                    TestBase.fmSupply,
+                    TestBase.tokenBufferAmount,
+                    await this.contractsManagerContract.getAddress(),
+                    await this.fundsManagerContract.getAddress(),
+                    await this.proposalContract.getAddress(),
+                    await this.parametersContract.getAddress(),
+                    "GitSwarm",
+                    "GS"]
+            }
         )
         if (createAccounts) {
             await this.createFiveTestAccounts()
