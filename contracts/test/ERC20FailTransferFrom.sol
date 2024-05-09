@@ -35,7 +35,7 @@ contract ERC20FailTransferFrom is ERC20Base {
         __balanceOf[_from] -= _value;
         __balanceOf[_to] += _value;
         __allowances[_from][msg.sender] -= _value;
-        emit TransferredFrom(_from, _to, _value);
+        emit Transfer(_from, _to, _value);
         return false;
     }
 }

@@ -3,7 +3,6 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
-import "./ERC20interface.sol";
 import "./ERC20Base.sol";
 
 /**
@@ -15,6 +14,7 @@ contract ExpandableSupplyTokenBase is ERC20Base {
     mapping(uint => CreateTokensProposal) public createTokensProposals;
     uint public projectId;
     bool public createMoreTokensDisabled = false;
+    uint256[42] private __gap;
 
     /** @dev Emitted when a proposal is executed */
     event ExecuteProposal(uint projectId, uint proposalId);

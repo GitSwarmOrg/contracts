@@ -107,7 +107,7 @@ describe("FundsManagerTests", function () {
 
     it("should fail with unexpected proposal type", async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await expect(c.processProposal(c.fundsManagerContract, proposalId, c.pId, true))
             .to.be.revertedWith("Unexpected proposal type");
@@ -303,7 +303,7 @@ describe("FundsManagerTests", function () {
         await deployFailTransferFromContract()
         await failTransferFromContract.approve(await c.fundsManagerContract.getAddress(), 99999999999n * DECIMALS);
         await expect(c.fundsManagerContract.depositToken(c.pId, await failTransferFromContract.getAddress(), 100n * DECIMALS))
-            .to.be.revertedWith("Token transfer from failed");
+            .to.be.revertedWithCustomError(c.fundsManagerContract, "SafeERC20FailedOperation");
     });
 
     it("should fail to propose transaction with empty amount list", async function () {
@@ -405,7 +405,7 @@ describe("FundsManagerTests", function () {
         await deployFailTransferFromContract()
         await failTransferFromContract.approve(await c.fundsManagerContract.getAddress(), 9999999999n * DECIMALS)
         await expect(c.fundsManagerContract.reclaimFunds(projectId, 1n * DECIMALS, [ethers.ZeroAddress]))
-            .to.be.revertedWith("Token transfer from failed");
+            .to.be.revertedWithCustomError(c.fundsManagerContract, "SafeERC20FailedOperation");
     });
 
     async function deployFailTransferContract() {
@@ -448,7 +448,7 @@ describe("FundsManagerTests", function () {
 
         await c.tokenContract.connect(c.accounts[0]).approve(await c.fundsManagerContract.getAddress(), 100n * DECIMALS);
         await expect(c.fundsManagerContract.connect(c.accounts[0]).reclaimFunds(c.pId, 1n * DECIMALS, [await failTransferContract.getAddress()]))
-            .to.be.revertedWith("Token transfer failed");
+            .to.be.revertedWithCustomError(c.fundsManagerContract, "SafeERC20FailedOperation");
     });
 
     it("should fail to send tokens with insufficient balance", async function () {
@@ -465,7 +465,7 @@ describe("FundsManagerTests", function () {
         await c.fundsManagerContract.depositToken(c.pId, await failTransferContract.getAddress(), 100n * DECIMALS);
 
         await expect(c.fundsManagerContract.sendToken(c.pId, await failTransferContract.getAddress(), c.accounts[0].address, 100n * DECIMALS))
-            .to.be.revertedWith("Token transfer failed");
+            .to.be.revertedWithCustomError(c.fundsManagerContract, "SafeERC20FailedOperation");
     });
 
     it("should fail to send ether with insufficient balance", async function () {

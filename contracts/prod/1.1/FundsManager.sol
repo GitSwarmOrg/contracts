@@ -3,14 +3,15 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
-import "./base/ERC20interface.sol";
 import "./base/Common.sol";
+import "../../openzeppelin-v5.0.1/token/ERC20/utils/SafeERC20.sol";
 //import "hardhat/console.sol";
 
 /** @title FundsManager for GitSwarm Projects
   * @notice Manages funds, transactions, and token interactions for projects within GitSwarm.
   */
 contract FundsManager is Common, Initializable, IFundsManager {
+    using SafeERC20 for IERC20;
     using Address for address payable;
 
     /** @dev Utilized for calculations involving percentages, set to 10^18. */
@@ -96,6 +97,12 @@ contract FundsManager is Common, Initializable, IFundsManager {
      * @param amount The new amount added to the balance.
      */
     event BalanceUpdated(uint projectId, address tokenAddress, uint amount);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initializes the contract with addresses of other components it interacts with.
      * @param _delegates Address of the Delegates contract.
@@ -121,7 +128,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
      * @param tokenAddress The address of the token to aggregate and send.
      */
     function sendOrphanTokensToGitSwarm(address tokenAddress) external {
-        ERC20interface tokenContract = ERC20interface(tokenAddress);
+        IERC20 tokenContract = IERC20(tokenAddress);
         uint amount;
         uint nbOfProjects = contractsManagerContract.nextProjectId();
         for (uint i = 0; i < nbOfProjects; i++) {
@@ -147,8 +154,8 @@ contract FundsManager is Common, Initializable, IFundsManager {
      * @param amount The amount of tokens to deposit.
      */
     function depositToken(uint projectId, address tokenAddress, uint amount) external {
-        ERC20interface tokenContract = ERC20interface(tokenAddress);
-        require(tokenContract.transferFrom(msg.sender, address(this), amount), "Token transfer from failed");
+        IERC20 tokenContract = IERC20(tokenAddress);
+        tokenContract.safeTransferFrom(msg.sender, address(this), amount);
         balances[projectId][tokenAddress] += amount;
         emit DepositToken(tokenAddress, projectId, amount);
     }
@@ -250,9 +257,9 @@ contract FundsManager is Common, Initializable, IFundsManager {
                         to.sendValue(amount[i]);
                     }
                 } else {
-                    ERC20interface erc20Contract = ERC20interface(tokenAddress[i]);
+                    IERC20 erc20Contract = IERC20(tokenAddress[i]);
                     balances[projectId][tokenAddress[i]] -= amount[i];
-                    require(erc20Contract.transfer(to, amount[i]), "Token transfer failed");
+                    erc20Contract.safeTransfer(to, amount[i]);
                 }
             }
         }
@@ -271,20 +278,21 @@ contract FundsManager is Common, Initializable, IFundsManager {
      * caller is redeeming tokens.
      */
     function reclaimFunds(uint projectId, uint votingTokenAmount, address[] memory tokenContractsAddresses) external {
-        ERC20interface votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
+        IERC20 votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
         require(votingTokenContract.allowance(msg.sender, payable(address(this))) >= votingTokenAmount, "insufficient allowance");
+        require(votingTokenAmount > 0, "cannot reclaim for 0 tokens");
         require(votingTokenAmount <= votingTokenContract.balanceOf(msg.sender), "insufficient balance");
         uint percentage = votingTokenAmount * PERCENTAGE_MULTIPLIER / contractsManagerContract.votingTokenCirculatingSupply(projectId);
         uint tokenAmount;
         uint[] memory sentTokenAmounts = new uint[](tokenContractsAddresses.length);
-        ERC20interface tokenContract;
-        require(votingTokenContract.transferFrom(msg.sender, BURN_ADDRESS, votingTokenAmount), "Token transfer from failed");
+        IERC20 tokenContract;
+        votingTokenContract.safeTransferFrom(msg.sender, BURN_ADDRESS, votingTokenAmount);
         for (uint i = 0; i < tokenContractsAddresses.length; i++) {
             if (tokenContractsAddresses[i] != address(votingTokenContract)) {
-                tokenContract = ERC20interface(tokenContractsAddresses[i]);
+                tokenContract = IERC20(tokenContractsAddresses[i]);
                 tokenAmount = percentage * balances[projectId][tokenContractsAddresses[i]] / PERCENTAGE_MULTIPLIER;
                 balances[projectId][tokenContractsAddresses[i]] -= tokenAmount;
-                require(tokenContract.transfer(msg.sender, tokenAmount), "Token transfer failed");
+                tokenContract.safeTransfer(msg.sender, tokenAmount);
                 sentTokenAmounts[i] = tokenAmount;
             }
         }
@@ -308,8 +316,8 @@ contract FundsManager is Common, Initializable, IFundsManager {
     function sendToken(uint projectId, address tokenAddress, address receiver, uint amount) external restricted(projectId) {
         require(amount <= balances[projectId][tokenAddress], "Not enough tokens on FundsManager");
         balances[projectId][tokenAddress] -= amount;
-        ERC20interface tokenContract = ERC20interface(tokenAddress);
-        require(tokenContract.transfer(receiver, amount), "Token transfer failed");
+        IERC20 tokenContract = IERC20(tokenAddress);
+        tokenContract.safeTransfer(receiver, amount);
         emit TokensSent(projectId, tokenAddress, receiver, amount);
     }
 

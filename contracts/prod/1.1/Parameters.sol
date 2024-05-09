@@ -45,7 +45,7 @@ contract Parameters is Common, Initializable, IParameters {
      * @notice Trusted addresses per project, may include other contracts or external addresses.
      * They can call any restricted methods, this enables them to send funds without proposals
      */
-    mapping(uint => address[]) public trustedAddresses;
+    mapping(uint => mapping(address => bool)) public trustedAddresses;
 
     /**
      * @notice Stores proposals for changing trusted addresses
@@ -63,21 +63,20 @@ contract Parameters is Common, Initializable, IParameters {
 
     /**
      * @notice A proposal structure for changing a trusted address.
-     * @dev Stores the index of the address in the `trustedAddresses` array and the new trusted address.
      */
     struct ChangeTrustedAddressProposal {
-        uint32 index;
         address trustedAddress;
+        bool value;
     }
 
     /**
      * @dev Emitted when a trusted address is changed for a project.
      * @param projectId The ID of the project related to the change.
      * @param proposalId The ID of the proposal that initiated the change.
-     * @param index The index of the trusted address.
      * @param trustedAddress The new trusted address.
+     * @param value Whether the address should be trusted.
      */
-    event ChangeTrustedAddress(uint projectId, uint proposalId, uint32 index, address trustedAddress);
+    event ChangeTrustedAddress(uint projectId, uint proposalId, address trustedAddress, bool value);
 
     /**
      * @notice Emitted when a proposal is executed.
@@ -91,6 +90,11 @@ contract Parameters is Common, Initializable, IParameters {
      * @param who The address of the GitSwarm being removed.
      */
     event GitSwarmAddressRemoved(address who);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializes the contract with necessary addresses and setups
@@ -112,14 +116,12 @@ contract Parameters is Common, Initializable, IParameters {
     }
 
     function initializeParameterMinMax() internal {
-        // 60 second values are for testing only. TODO: Change to 1 day for mainnet.
-
         // Proposal voting duration
-        parameterMinValues[keccak256("VoteDuration")] = 60 seconds;
+        parameterMinValues[keccak256("VoteDuration")] = 1 days;
         parameterMaxValues[keccak256("VoteDuration")] = 30 days;
 
         // For how long a proposal can be contested after the voting stage
-        parameterMinValues[keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 60 seconds;
+        parameterMinValues[keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 1 days;
         parameterMaxValues[keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 30 days;
 
         // Minimum percentage of the project's token required to make a new proposal is 100/MaxNrOfVoters
@@ -135,7 +137,7 @@ contract Parameters is Common, Initializable, IParameters {
         parameterMaxValues[keccak256("VetoMinimumPercentage")] = 50;
 
         // Maximum period in which a proposal can be executed
-        parameterMinValues[keccak256("ExpirationPeriod")] = 60 seconds;
+        parameterMinValues[keccak256("ExpirationPeriod")] = 1 days;
         parameterMaxValues[keccak256("ExpirationPeriod")] = 30 days;
     }
 
@@ -148,19 +150,16 @@ contract Parameters is Common, Initializable, IParameters {
     }
 
     function internalInitializeParameters(uint projectId) internal virtual {
-        // 60 second values are for testing only. TODO: Change to 3 days for mainnet.
-        // 5 minute ExpirationPeriod is for testing only. TODO: Change to 7 days for mainnet.
-
-        parameters[projectId][keccak256("VoteDuration")] = 60 seconds;
+        parameters[projectId][keccak256("VoteDuration")] = 3 days;
 
         // MaxNrOfVoters set to 1000 means that a minimum percentage of 0.1% of the circulating supply of tokens
         // is needed to vote on/create a proposal. This helps mitigate the risk of counting votes costing more gas than
         // the block limit
         parameters[projectId][keccak256("MaxNrOfVoters")] = 1000;
-        parameters[projectId][keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 60 seconds;
+        parameters[projectId][keccak256("BufferBetweenEndOfVotingAndExecuteProposal")] = 3 days;
         parameters[projectId][keccak256("RequiredVotingPowerPercentageToCreateTokens")] = 80;
         parameters[projectId][keccak256("VetoMinimumPercentage")] = 30;
-        parameters[projectId][keccak256("ExpirationPeriod")] = 5 minutes;
+        parameters[projectId][keccak256("ExpirationPeriod")] = 7 days;
     }
 
     /**
@@ -192,20 +191,10 @@ contract Parameters is Common, Initializable, IParameters {
 
         if (typeOfProposal == CHANGE_TRUSTED_ADDRESS) {
             ChangeTrustedAddressProposal memory p = changeTrustedAddressProposals[projectId][proposalId];
-            address[] storage ta = trustedAddresses[projectId];
-            if (p.trustedAddress != address(0)) {
-                if (p.index == ta.length) {
-                    ta.push(p.trustedAddress);
-                } else {
-                    ta[p.index] = p.trustedAddress;
-                }
-            } else {
-                require(ta.length > 0, "No element in trustedAddress array.");
-                ta[p.index] = ta[ta.length - 1];
-                ta.pop();
-            }
+            mapping(address => bool) storage ta = trustedAddresses[projectId];
+            ta[p.trustedAddress] = p.value;
 
-            emit ChangeTrustedAddress(projectId, proposalId, p.index, p.trustedAddress);
+            emit ChangeTrustedAddress(projectId, proposalId, p.trustedAddress, p.value);
             proposalContract.deleteProposal(projectId, proposalId);
             delete changeTrustedAddressProposals[projectId][proposalId];
         } else if (typeOfProposal == CHANGE_PARAMETER) {
@@ -254,26 +243,21 @@ contract Parameters is Common, Initializable, IParameters {
         ) {
             return true;
         }
-        for (uint i = 0; i < trustedAddresses[projectId].length; i++) {
-            if (trustedAddresses[projectId][i] == trustedAddress) {
-                return true;
-            }
-        }
-        return false;
+        return trustedAddresses[projectId][trustedAddress];
     }
 
     /**
      * @notice Proposes a change to a trusted address for a given project.
-     * @dev Validates the contract index and records the proposal for a change in trusted addresses.
+     * @dev Records the proposal for a change in trusted addresses.
      * @param projectId The ID of the project for which the change is proposed.
-     * @param index The index of the trusted address to be changed.
      * @param trustedAddress The newly proposed trusted address.
+     * @param value Whether the address should be trusted.
      */
-    function proposeChangeTrustedAddress(uint projectId, uint32 index, address trustedAddress) external {
-        require(index >= 0 && index <= trustedAddresses[projectId].length, "index out of bounds");
+    function proposeChangeTrustedAddress(uint projectId, address trustedAddress, bool value) external {
         changeTrustedAddressProposals[projectId][proposalContract.nextProposalId(projectId)] = ChangeTrustedAddressProposal({
-            index: index,
-            trustedAddress: trustedAddress});
+            trustedAddress: trustedAddress,
+            value: value
+        });
         proposalContract.createProposal(projectId, CHANGE_TRUSTED_ADDRESS, msg.sender);
     }
 }

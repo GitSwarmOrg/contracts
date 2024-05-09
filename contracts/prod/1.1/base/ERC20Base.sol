@@ -3,18 +3,17 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
-import "./ERC20interface.sol";
 import "./Common.sol";
 
 /**
  * @title ERC20 Basic Token
  * @dev Implementation of the interface of the ERC20 standard.
- * @notice Inherits functionality from Common and implements ERC20interface.
+ * @notice Inherits functionality from Common and implements IERC20.
  */
-contract ERC20Base is ERC20interface, Common {
+contract ERC20Base is IERC20, Common {
     string public symbol;
     string public name;
-    uint8 public constant _decimals = 18;
+    uint8 internal constant DECIMALS = 18;
     uint internal __totalSupply;
     mapping(address => uint) internal __balanceOf;
     mapping(address => mapping(address => uint)) internal __allowances;
@@ -23,8 +22,8 @@ contract ERC20Base is ERC20interface, Common {
      * @dev Returns the number of decimals used to get its user representation.
      * @return dec Number of decimals.
      */
-    function decimals() override external pure returns (uint dec) {
-        dec = _decimals;
+    function decimals() external pure returns (uint dec) {
+        dec = DECIMALS;
     }
 
     /**
@@ -75,7 +74,7 @@ contract ERC20Base is ERC20interface, Common {
         __balanceOf[_from] -= _value;
         __balanceOf[_to] += _value;
         __allowances[_from][msg.sender] -= _value;
-        emit TransferredFrom(_from, _to, _value);
+        emit Transfer(_from, _to, _value);
         return true;
     }
 

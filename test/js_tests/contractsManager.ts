@@ -117,7 +117,7 @@ describe("ContractsManager", function () {
 
     it("should fail with unexpected proposal type", async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await expect(c.processProposal(c.contractsManagerContract, proposalId, c.pId, true))
             .to.be.revertedWith("Unexpected proposal type");
@@ -285,16 +285,10 @@ describe("ContractsManager", function () {
     });
 
     it("should cover isERC20Token", async function () {
-        let [Broken_ERC20_Missing_name] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_name.json'})
-        let [Broken_ERC20_Missing_symbol] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_symbol.json'})
-        let [Broken_ERC20_Missing_decimals] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_decimals.json'})
         let [Broken_ERC20_Missing_totalSupply] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_totalSupply.json'})
         let [Broken_ERC20_Missing_balanceOf] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_balanceOf.json'})
         let [Broken_ERC20_Missing_allowance] = await deployContractAndWait({contractNameOrPath: 'artifacts/contracts/test/BrokenERC20.sol/Broken_ERC20_Missing_allowance.json'})
 
-        expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_name)).to.be.false;
-        expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_symbol)).to.be.false;
-        expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_decimals)).to.be.false;
         expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_totalSupply)).to.be.false;
         expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_balanceOf)).to.be.false;
         expect(await c.contractsManagerContract.isERC20Token(Broken_ERC20_Missing_allowance)).to.be.false;

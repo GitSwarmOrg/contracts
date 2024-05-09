@@ -3,9 +3,7 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
-import "./base/ERC20interface.sol";
 import "./base/Common.sol";
-
 /**
  * @title Delegates contract for managing delegations within a decentralized voting system.
  * @dev Inherits functionalities from `Common` and implements `IDelegates`.
@@ -43,6 +41,11 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param sender Address of the delegate performing the action.
      */
     event UndelegateAllFromSelfEvent(address sender);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializes the contract with necessary addresses and contracts.
@@ -82,7 +85,7 @@ contract Delegates is Common, Initializable, IDelegates {
      * @return delegatedVotingPower The total voting power delegated to the given address.
      */
     function getDelegatedVotingPower(uint projectId, address delegatedAddr) external view returns (uint delegatedVotingPower) {
-        ERC20interface tokenContract = contractsManagerContract.votingTokenContracts(projectId);
+        IERC20 tokenContract = contractsManagerContract.votingTokenContracts(projectId);
         address[] memory delegatesOfDelegatedAddr = getDelegatorsOf(projectId, delegatedAddr);
         delegatedVotingPower = 0;
         for (uint i = 0; i < delegatesOfDelegatedAddr.length; i++) {
@@ -98,7 +101,7 @@ contract Delegates is Common, Initializable, IDelegates {
      * @return True if the address has at least the specified amount of voting power, false otherwise.
      */
     function checkVotingPower(uint projectId, address addr, uint minVotingPower) public view returns (bool) {
-        ERC20interface tokenContract = contractsManagerContract.votingTokenContracts(projectId);
+        IERC20 tokenContract = contractsManagerContract.votingTokenContracts(projectId);
         uint delegatedPower = tokenContract.balanceOf(addr);
         if (delegatedPower >= minVotingPower) {
             return true;
@@ -129,7 +132,7 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param delegatedAddr The address to which the caller's voting power is being delegated.
      */
     function delegate(uint projectId, address delegatedAddr) external {
-        ERC20interface tokenContract = contractsManagerContract.votingTokenContracts(projectId);
+        IERC20 tokenContract = contractsManagerContract.votingTokenContracts(projectId);
         require(delegatedAddr != msg.sender && delegateOf[projectId][delegatedAddr] != msg.sender,
             "Can't delegate to yourself");
         uint minVotingPower = contractsManagerContract.minimumRequiredAmount(projectId);

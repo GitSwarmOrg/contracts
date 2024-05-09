@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import "./ERC20interface.sol";
+import "../../../openzeppelin-v5.0.1/token/ERC20/IERC20.sol";
 
 interface IContractsManager {
-    function votingTokenContracts(uint projectId) external view returns (ERC20interface);
+    function votingTokenContracts(uint projectId) external view returns (IERC20);
     function addBurnAddressProposals(uint projectId, uint proposalId) external view returns (address);
     function nextProjectId() external view returns (uint);
     function getBurnAddresses(uint projectId) external view returns (address[] memory);
-    function burnedTokens(uint projectId, ERC20interface votingTokenContract) external view returns (uint);
+    function burnedTokens(uint projectId, IERC20 votingTokenContract) external view returns (uint);
     function votingTokenCirculatingSupply(uint projectId) external view returns (uint);
     function createProject(string memory dbProjectId, address tokenContractAddress) external;
     function createProject(string memory dbProjectId, address tokenContractAddress, bool checkErc20) external;
@@ -71,8 +71,8 @@ interface IProposal {
     function checkVoteCount(uint, uint, uint) external view returns (uint, uint, bool);
     function lockVoteCount(uint, uint) external;
     function getVoteCount(uint, uint) external view returns (uint, uint);
-    function getDelegatedVotingPowerExcludingVoters(uint, address, uint,  ERC20interface) external view returns (uint);
-    function calculateTotalVotingPower(uint, address, uint, ERC20interface) external view returns (uint);
+    function getDelegatedVotingPowerExcludingVoters(uint, address, uint,  IERC20) external view returns (uint);
+    function calculateTotalVotingPower(uint, address, uint, IERC20) external view returns (uint);
     function contestProposal(uint projectId, uint proposalId, bool doRecount) external returns (bool);
 }
 
@@ -85,7 +85,7 @@ interface IParameters {
     function executeProposal(uint, uint) external;
     function gitswarmAddress() external view returns (address);
     function isTrustedAddress(uint projectId, address trustedAddress) external view returns (bool);
-    function proposeChangeTrustedAddress(uint projectId, uint32 index, address trustedAddress) external;
-    function trustedAddresses(uint projectId, uint index) external view returns (address);
-    function changeTrustedAddressProposals(uint projectId, uint proposalId) external view returns (uint32 index, address trustedAddress);
+    function proposeChangeTrustedAddress(uint projectId, address trustedAddress, bool value) external;
+    function trustedAddresses(uint projectId, address trustedAddress) external view returns (bool);
+    function changeTrustedAddressProposals(uint projectId, uint proposalId) external view returns (address trustedAddress, bool value);
 }

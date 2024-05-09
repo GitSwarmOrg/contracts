@@ -3,7 +3,6 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
-import "./base/ERC20interface.sol";
 import "./base/Common.sol";
 
 /**
@@ -93,13 +92,6 @@ contract Proposal is Common, Initializable, IProposal {
     event LockVoteCount(uint projectId, uint proposalId, bool willExecute, uint yesVotes, uint noVotes);
 
     /**
-     * @notice Emitted when a proposal is executed.
-     * @param projectId The ID of the project for which the proposal is made.
-     * @param proposalId The ID of the proposal being executed.
-     */
-    event ExecuteProposal(uint projectId, uint proposalId);
-
-    /**
      * @notice Emitted when a vote is cast on a proposal.
      * @param projectId The ID of the project for which the proposal is made.
      * @param proposalId The ID of the proposal being voted on.
@@ -150,6 +142,11 @@ contract Proposal is Common, Initializable, IProposal {
      * @param noVotes The total number of no votes the proposal received before being contested.
      */
     event ContestedProposal(uint projectId, uint proposalId, uint yesVotes, uint noVotes);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @notice Initializes the contract with necessary addresses and setups
@@ -325,6 +322,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @dev Helps maintain integrity by removing spam or irrelevant votes
      */
     function removeSpamVoters(uint projectId, uint proposalId, uint[] memory indexes) external {
+        address gitswarmAddress = parametersContract.gitswarmAddress();
         uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) / parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         emit RemovedSpamVoters(projectId, proposalId, indexes);
         ProposalData storage p = proposals[projectId][proposalId];
@@ -332,6 +330,9 @@ contract Proposal is Common, Initializable, IProposal {
             // avoiding underflow when decrementing, that would have happened for value 0
             uint64 i = uint64(indexes[index - 1]);
             require(i < p.nrOfVoters, "Index out of bounds");
+            if(p.voters[i] == gitswarmAddress) {
+                continue;
+            }
             if (!delegatesContract.checkVotingPower(projectId, p.voters[i], minimum_amount)) {
                 p.nrOfVoters--;
                 delete p.votes[p.voters[i]];
@@ -345,7 +346,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Calculates the delegated voting power excluding voters who have already voted
      * @dev Utility function to calculate total voting power for a delegate
      */
-    function getDelegatedVotingPowerExcludingVoters(uint projectId, address delegatedAddr, uint proposalId, ERC20interface tokenContract) public view returns (uint delegatedVotes) {
+    function getDelegatedVotingPowerExcludingVoters(uint projectId, address delegatedAddr, uint proposalId, IERC20 tokenContract) public view returns (uint delegatedVotes) {
         address[] memory delegations = delegatesContract.getDelegatorsOf(projectId, delegatedAddr);
         delegatedVotes = 0;
         for (uint i = 0; i < delegations.length; i++) {
@@ -359,7 +360,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Calculates the total voting power of an address for a proposal
      * @dev Sums the balance of tokens and delegated tokens, excluding delegators who have already voted
      */
-    function calculateTotalVotingPower(uint projectId, address addr, uint id, ERC20interface tokenContract) view public returns (uint) {
+    function calculateTotalVotingPower(uint projectId, address addr, uint id, IERC20 tokenContract) view public returns (uint) {
         return tokenContract.balanceOf(addr) + getDelegatedVotingPowerExcludingVoters(projectId, addr, id, tokenContract);
     }
 
@@ -377,7 +378,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @dev Aggregates the voting power of yes and no votes
      */
     function getVoteCount(uint projectId, uint proposalId) public view returns (uint, uint) {
-        ERC20interface votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
+        IERC20 votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
         uint yesVotes;
         uint noVotes;
         for (uint64 i = 0; i < proposals[projectId][proposalId].nrOfVoters; i++) {

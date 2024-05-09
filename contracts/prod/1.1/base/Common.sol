@@ -8,6 +8,7 @@ import "./Constants.sol";
 import "../../../openzeppelin-v5.0.1/proxy/utils/Initializable.sol";
 import "../../../openzeppelin-v5.0.1/utils/Strings.sol";
 import "../../../openzeppelin-v5.0.1/utils/Address.sol";
+import "../../../openzeppelin-v5.0.1/token/ERC20/IERC20.sol";
 
 /**
  * @title Common Functions and Modifiers for GitSwarm Contracts
@@ -20,6 +21,8 @@ contract Common is Constants {
     IProposal public proposalContract;
     IGasStation public gasStationContract;
     IContractsManager public contractsManagerContract;
+
+    uint256[42] private __gap;
 
     /**
      * @notice Prevents direct Ether transfers to this contract.

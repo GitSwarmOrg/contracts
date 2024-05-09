@@ -4,10 +4,10 @@
 pragma solidity 0.8.20;
 
 import "./base/Common.sol";
-import "./base/ERC20interface.sol";
 import "./base/MyTransparentUpgradeableProxy.sol";
 import "../../openzeppelin-v5.0.1/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "../../openzeppelin-v5.0.1/proxy/transparent/ProxyAdmin.sol";
+import "../../openzeppelin-v5.0.1/token/ERC20/IERC20.sol";
 
 /**
  * @title Contracts Manager for Governance
@@ -17,7 +17,7 @@ import "../../openzeppelin-v5.0.1/proxy/transparent/ProxyAdmin.sol";
 contract ContractsManager is Common, Initializable, IContractsManager {
 
     /// Maps project IDs to their associated ERC20 voting token contracts
-    mapping(uint => ERC20interface) public votingTokenContracts;
+    mapping(uint => IERC20) public votingTokenContracts;
 
     /// Stores proposals for changing the voting token of a project
     mapping(uint => mapping(uint => address)) public changeVotingTokenProposals;
@@ -84,6 +84,11 @@ contract ContractsManager is Common, Initializable, IContractsManager {
         address contractsManager;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initializes the contract with given addresses for various roles and functionalities.
      * @dev Marks the contract as initialized and sets up essential components and roles.
@@ -115,7 +120,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param votingTokenContract The ERC20 voting token contract associated with the project.
      * @return The total amount of tokens burned.
      */
-    function burnedTokens(uint projectId, ERC20interface votingTokenContract) public view returns (uint) {
+    function burnedTokens(uint projectId, IERC20 votingTokenContract) public view returns (uint) {
         uint amount = 0;
         for (uint i = 0; i < burnAddresses[projectId].length; i++) {
             amount += votingTokenContract.balanceOf(burnAddresses[projectId][i]);
@@ -129,7 +134,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @return The circulating supply of the project's voting token.
      */
     function votingTokenCirculatingSupply(uint projectId) public view returns (uint) {
-        ERC20interface votingTokenContract = votingTokenContracts[projectId];
+        IERC20 votingTokenContract = votingTokenContracts[projectId];
         return votingTokenContract.totalSupply()
         - burnedTokens(projectId, votingTokenContract)
             - votingTokenContract.balanceOf(address(fundsManagerContract));
@@ -144,7 +149,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      */
     function hasMinBalance(uint projectId, address addr) external view returns (bool) {
         if (addr == parametersContract.gitswarmAddress()) {
-        // GitSwarm is exempt, used for payroll proposals
+            // GitSwarm is exempt, used for payroll proposals
             return true;
         }
         uint required_amount = minimumRequiredAmount(projectId);
@@ -175,7 +180,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
         }
         parametersContract.initializeParameters(nextProjectId);
         burnAddresses[nextProjectId].push(BURN_ADDRESS);
-        votingTokenContracts[nextProjectId] = ERC20interface(tokenContractAddress);
+        votingTokenContracts[nextProjectId] = IERC20(tokenContractAddress);
         emit CreateProject(nextProjectId, dbProjectId, tokenContractAddress);
         nextProjectId++;
     }
@@ -188,7 +193,6 @@ contract ContractsManager is Common, Initializable, IContractsManager {
     function createProject(string memory dbProjectId, address tokenContractAddress) external {
         createProject(dbProjectId, tokenContractAddress, true);
     }
-
 
     /**
      * @notice Proposes an upgrade to the contracts associated with a project.
@@ -216,12 +220,11 @@ contract ContractsManager is Common, Initializable, IContractsManager {
         proposalContract.createProposal(0, UPGRADE_CONTRACTS, msg.sender);
     }
 
-
     /**
      * @notice Verifies if a given address is an ERC20 token contract.
      * @dev Attempts to call ERC20-specific functions to confirm compliance.
      * @param _addr The address to be verified.
-     * @return True if the address is an ERC20 token contract, false otherwise.
+     * @return True if the address implements the decimals methods totalSupply, balanceOf and allowance false otherwise.
      */
     function isERC20Token(address _addr) public view returns (bool) {
         address dummyAddress = 0x0000000000000000000000000000000000000000;
@@ -230,12 +233,9 @@ contract ContractsManager is Common, Initializable, IContractsManager {
             return false;
         }
 
-        try ERC20interface(_addr).name() {} catch {return false;}
-        try ERC20interface(_addr).symbol() {} catch {return false;}
-        try ERC20interface(_addr).decimals() {} catch {return false;}
-        try ERC20interface(_addr).totalSupply() {} catch {return false;}
-        try ERC20interface(_addr).balanceOf(dummyAddress) {} catch {return false;}
-        try ERC20interface(_addr).allowance(dummyAddress, dummyAddress) {} catch {return false;}
+        try IERC20(_addr).totalSupply() {} catch {return false;}
+        try IERC20(_addr).balanceOf(dummyAddress) {} catch {return false;}
+        try IERC20(_addr).allowance(dummyAddress, dummyAddress) {} catch {return false;}
 
         return true;
     }
@@ -279,7 +279,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
 
 
         if (typeOfProposal == CHANGE_VOTING_TOKEN_ADDRESS) {
-            votingTokenContracts[projectId] = ERC20interface(changeVotingTokenProposals[projectId][proposalId]);
+            votingTokenContracts[projectId] = IERC20(changeVotingTokenProposals[projectId][proposalId]);
             emit ChangeVotingTokenAddress(projectId, proposalId, changeVotingTokenProposals[projectId][proposalId]);
             proposalContract.deleteProposal(projectId, proposalId);
             delete changeVotingTokenProposals[projectId][proposalId];

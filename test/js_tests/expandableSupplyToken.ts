@@ -30,7 +30,7 @@ describe("expandable supply token", function () {
     });
 
     async function makeAProposal() {
-        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
     }
 
     it("should create non-zero supply with failure", async function () {
@@ -52,7 +52,7 @@ describe("expandable supply token", function () {
 
     it("should fail with unexpected proposal type for ExpandableSupplyToken", async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.proposalContract.lockVoteCount(c.pId, proposalId);
         await increaseTime(TestBase.BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL + 15);

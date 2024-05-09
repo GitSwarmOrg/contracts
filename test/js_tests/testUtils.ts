@@ -203,13 +203,14 @@ export async function initialDeployGsContracts(
 
 
 export class TestBase {
+    static DAY = 86400;
     static tokenBufferAmount = 10n ** 20n;
     static fmSupply = 10n ** 20n;
     static TEST_ACCOUNT_DEFAULT_TOKEN_AMOUNT = 10n ** 18n;
     static TEST_ACCOUNT_DEFAULT_ETH_AMOUNT = 10n ** 20n;
-    static VOTE_DURATION = 60 + 3
-    static EXPIRATION_PERIOD = 5 * 60
-    static BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL: number = 60;
+    static VOTE_DURATION = 3 * TestBase.DAY + 3
+    static EXPIRATION_PERIOD = 7 * TestBase.DAY
+    static BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL: number = 3 * TestBase.DAY;
     static DECIMALS: bigint = 10n ** 18n;
     skipDeploy = false;
     ethAccount!: Wallet;
@@ -267,7 +268,7 @@ export class TestBase {
     async setTrustedAddress(trustedAddress: any) {
         const proposalId = await this.proposalContract.nextProposalId(this.pId);
 
-        await this.parametersContract.proposeChangeTrustedAddress(this.pId, 0, trustedAddress);
+        await this.parametersContract.proposeChangeTrustedAddress(this.pId, trustedAddress, true);
 
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await this.processProposal(this.parametersContract, proposalId, this.pId, true);

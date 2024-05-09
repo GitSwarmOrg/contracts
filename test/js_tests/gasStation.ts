@@ -51,7 +51,7 @@ describe('GasStation', function () {
 
     it("should fail with unexpected proposal type for GasStation", async function () {
         const proposalId = await c.proposalContract.nextProposalId(GS_PROJECT_ID);
-        await c.parametersContract.proposeParameterChange(GS_PROJECT_ID, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.proposeParameterChange(GS_PROJECT_ID, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.proposalContract.lockVoteCount(GS_PROJECT_ID, proposalId);
         await increaseTime(TestBase.BUFFER_BETWEEN_END_OF_VOTING_AND_EXECUTE_PROPOSAL + 15);

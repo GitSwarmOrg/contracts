@@ -67,7 +67,7 @@ describe('Parameters', function () {
 
     it('should propose parameter change', async function () {
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
-        const value = 3600; // 1 hour
+        const value = TestBase.VOTE_DURATION + 5;
 
         await c.parametersContract.proposeParameterChange(0, parameterName, value);
 
@@ -79,7 +79,7 @@ describe('Parameters', function () {
 
     it('should execute proposal', async function () {
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
-        const value = 3600; // 1 hour
+        const value = TestBase.VOTE_DURATION - 42;
 
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         await c.parametersContract.proposeParameterChange(c.pId, parameterName, value);
@@ -102,7 +102,7 @@ describe('Parameters', function () {
         expect(await c.parametersContract.isTrustedAddress(0, c.accounts[2].address)).to.be.false;
 
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, c.accounts[2].address);
+        await c.parametersContract.proposeChangeTrustedAddress(c.pId, c.accounts[2].address, true);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.processProposal(c.parametersContract, proposalId, c.pId, true);
 
@@ -140,7 +140,7 @@ describe('Parameters', function () {
     it('should fail if the buffer time has not ended', async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
-        const value = 3600; // 1 hour
+        const value = 3 * TestBase.DAY - 100;
 
         await c.parametersContract.proposeParameterChange(c.pId, parameterName, value);
 
@@ -152,7 +152,7 @@ describe('Parameters', function () {
     it('should fail if the execution period has expired', async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
-        const value = 3600; // 1 hour
+        const value = 3 * TestBase.DAY - 100;
 
         await c.parametersContract.proposeParameterChange(c.pId, parameterName, value);
 
@@ -166,7 +166,7 @@ describe('Parameters', function () {
     it('should fail if the proposal is set not to execute', async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
-        const value = 3600; // 1 hour
+        const value = TestBase.VOTE_DURATION - 42;
 
         await c.parametersContract.proposeParameterChange(c.pId, parameterName, value);
 
@@ -183,7 +183,7 @@ describe('Parameters', function () {
     it('should execute a change parameter proposal', async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
-        const value = 3600; // 1 hour
+        const value = TestBase.VOTE_DURATION - 42;
 
         await c.parametersContract.proposeParameterChange(c.pId, parameterName, value);
 
@@ -197,68 +197,43 @@ describe('Parameters', function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         const trustedAddress = c.accounts[2].address;
 
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, trustedAddress);
+        await c.parametersContract.proposeChangeTrustedAddress(c.pId, trustedAddress, true);
 
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.processProposal(c.parametersContract, proposalId, c.pId, true);
 
-        const trustedAddresses = await c.parametersContract.trustedAddresses(c.pId, 0);
-        expect(trustedAddresses).to.equal(trustedAddress);
+        expect(await c.parametersContract.trustedAddresses(c.pId,trustedAddress)).to.be.true;
+        expect(await c.parametersContract.isTrustedAddress(c.pId,trustedAddress)).to.be.true;
     });
 
-    it('should update an existing trusted address at the specified index', async function () {
-        const proposalId = await c.proposalContract.nextProposalId(c.pId);
-        const trustedAddress1 = c.accounts[2].address;
-        const trustedAddress2 = c.accounts[3].address;
-
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, trustedAddress1);
-        await increaseTime(TestBase.VOTE_DURATION + 5);
-        await c.processProposal(c.parametersContract, proposalId, c.pId, true);
-
-        const updateProposalId = await c.proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, trustedAddress2);
-        await increaseTime(TestBase.VOTE_DURATION + 5);
-        await c.processProposal(c.parametersContract, updateProposalId, c.pId, true);
-
-        const trustedAddresses = await c.parametersContract.trustedAddresses(c.pId, 0);
-        expect(trustedAddresses).to.equal(trustedAddress2);
-    });
-
-    it('should remove a trusted address and replace it with the last element', async function () {
+    it('should remove a trusted address', async function () {
         const proposalId1 = await c.proposalContract.nextProposalId(c.pId);
         const proposalId2 = proposalId1 + 1n;
         const trustedAddress1 = c.accounts[2].address;
         const trustedAddress2 = c.accounts[3].address;
 
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, trustedAddress1);
+        await c.parametersContract.proposeChangeTrustedAddress(c.pId, trustedAddress1, true);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.processProposal(c.parametersContract, proposalId1, c.pId, true);
 
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 1, trustedAddress2);
+        await c.parametersContract.proposeChangeTrustedAddress(c.pId, trustedAddress2, true);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.processProposal(c.parametersContract, proposalId2, c.pId, true);
 
+        expect(await c.parametersContract.trustedAddresses(c.pId,trustedAddress1)).to.be.true;
+        expect(await c.parametersContract.isTrustedAddress(c.pId,trustedAddress1)).to.be.true;
+        expect(await c.parametersContract.trustedAddresses(c.pId,trustedAddress2)).to.be.true;
+        expect(await c.parametersContract.isTrustedAddress(c.pId,trustedAddress2)).to.be.true;
+
         const removeProposalId = await c.proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, ethers.ZeroAddress);
+        await c.parametersContract.proposeChangeTrustedAddress(c.pId, trustedAddress1, false);
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await c.processProposal(c.parametersContract, removeProposalId, c.pId, true);
 
-        const trustedAddresses = await c.parametersContract.trustedAddresses(c.pId, 0);
-        expect(trustedAddresses).to.equal(trustedAddress2);
-    });
-
-    it('should fail if removing a trusted address from an empty array', async function () {
-        const proposalId = await c.proposalContract.nextProposalId(c.pId);
-
-        await c.parametersContract.proposeChangeTrustedAddress(c.pId, 0, ethers.ZeroAddress);
-        await increaseTime(TestBase.VOTE_DURATION + 5);
-
-        await expect(c.processProposal(c.parametersContract, proposalId, c.pId, true))
-            .to.be.revertedWith("No element in trustedAddress array.");
-    });
-    it('should fail with index out of bounds', async function () {
-        await expect(c.parametersContract.proposeChangeTrustedAddress(c.pId, 99, ethers.ZeroAddress))
-            .to.be.revertedWith("index out of bounds");
+        expect(await c.parametersContract.trustedAddresses(c.pId,trustedAddress1)).to.be.false;
+        expect(await c.parametersContract.isTrustedAddress(c.pId,trustedAddress1)).to.be.false;
+        expect(await c.parametersContract.trustedAddresses(c.pId,trustedAddress2)).to.be.true;
+        expect(await c.parametersContract.isTrustedAddress(c.pId,trustedAddress2)).to.be.true;
     });
 
     it("tests neededToContest", async function () {

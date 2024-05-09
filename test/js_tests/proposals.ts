@@ -21,7 +21,7 @@ describe("Proposal", function () {
     });
 
     async function makeAProposal() {
-        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
     }
 
     it("should set proposal active", async function () {
@@ -113,7 +113,7 @@ describe("Proposal", function () {
 
     it("should check vote count with tie-breaker", async function () {
         const proposalId = await proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.connect(c.accounts[1]).proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.connect(c.accounts[1]).proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
 
         await proposalContract.connect(c.accounts[2]).vote(c.pId, proposalId, false);
         await sendEth(ethers.parseEther("100"), GITSWARM_ACCOUNT.address, signer);
@@ -164,7 +164,7 @@ describe("Proposal", function () {
     it("should fail due to minBalance", async function () {
         let acc = await c.createTestAccount({tokenAmount: 1n})
         await expect(c.parametersContract.connect(new NonceManager(acc))
-            .proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600))
+            .proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42))
             .to.be.revertedWith("Not enough voting power.");
         await expect(c.proposalContract.connect(new NonceManager(acc)).vote(c.pId, 0, false))
             .to.be.revertedWith("Not enough voting power.");
@@ -245,7 +245,7 @@ describe("Proposal", function () {
 
     it("should process contested proposal if no votes greater than yes votes", async function () {
         const proposalId = await proposalContract.nextProposalId(c.pId);
-        await c.parametersContract.connect(c.accounts[1]).proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), 3600);
+        await c.parametersContract.connect(c.accounts[1]).proposeParameterChange(c.pId, ethers.keccak256(ethers.toUtf8Bytes("VoteDuration")), TestBase.VOTE_DURATION - 42);
 
         await increaseTime(TestBase.VOTE_DURATION + 5);
         await proposalContract.lockVoteCount(c.pId, proposalId);

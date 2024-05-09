@@ -3,7 +3,6 @@
 // This code is licensed under MIT license (see LICENSE.txt for details)
 pragma solidity 0.8.20;
 
-import "./base/ERC20interface.sol";
 import "./base/ERC20Base.sol";
 //import "hardhat/console.sol";
 

@@ -50,6 +50,11 @@ contract GasStation is Common, Initializable, IGasStation {
      */
     event TransferredGas(address toAddress, uint amount);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @dev Initializes the contract with necessary addresses.
      * @param _delegates Address of the delegates contract.
