@@ -1,7 +1,7 @@
 import {expect} from 'chai';
 import hre from "hardhat";
 import {Signer} from 'ethers';
-import {GITSWARM_ACCOUNT, GITSWARM_ACCOUNT_ADDRESS, increaseTime, sendEth, signer, TestBase} from "./testUtils";
+import {GITSWARM_ACCOUNT, increaseTime, sendEth, signer, TestBase} from "./testUtils";
 
 const ethers = hre.ethers;
 
@@ -57,7 +57,7 @@ describe('Parameters', function () {
     });
 
     it('should initialize parameters correctly', async function () {
-        expect(await c.parametersContract.gitswarmAddress()).to.equal(GITSWARM_ACCOUNT_ADDRESS);
+        expect(await c.parametersContract.gitswarmAddress()).to.equal(GITSWARM_ACCOUNT.address);
     });
 
     it('should be restricted', async function () {
@@ -92,7 +92,7 @@ describe('Parameters', function () {
     });
 
     it('should remove GitSwarm address', async function () {
-        sendEth(ethers.parseEther("1"), GITSWARM_ACCOUNT_ADDRESS, signer);
+        await sendEth(ethers.parseEther("1"), GITSWARM_ACCOUNT.address, signer);
         await c.parametersContract.connect(GITSWARM_ACCOUNT).removeGitSwarmAddress();
 
         expect(await c.parametersContract.gitswarmAddress()).to.equal(ethers.ZeroAddress);

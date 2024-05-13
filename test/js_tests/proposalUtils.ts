@@ -1,6 +1,5 @@
 import hre from "hardhat";
 import {BaseContract, Contract, Numeric} from "ethers";
-import {ContractsManager, ERC20Base, ExpandableSupplyToken, FundsManager, Proposal} from "../../typechain-types";
 
 const ethers = hre.ethers;
 

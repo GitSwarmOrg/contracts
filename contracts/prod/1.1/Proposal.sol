@@ -31,12 +31,12 @@ import "./base/Common.sol";
  * is expired and can no longer be executed.
  *
  * Key Methods:
- * - `createProposal(uint projectId, uint32 proposalType, address voterAddress)`: Initiates a new proposal.
- * - `vote(uint projectId, uint proposalId, bool choice)`: Records a vote for a proposal.
- * - `lockVoteCount(uint projectId, uint proposalId)`: Locks the vote count and starts the contesting period.
- * - `contestProposal(uint projectId, uint proposalId, bool doRecount)`: Can be used to contest
+ * - `createProposal(uint256 projectId, uint32 proposalType, address voterAddress)`: Initiates a new proposal.
+ * - `vote(uint256 projectId, uint256 proposalId, bool choice)`: Records a vote for a proposal.
+ * - `lockVoteCount(uint256 projectId, uint256 proposalId)`: Locks the vote count and starts the contesting period.
+ * - `contestProposal(uint256 projectId, uint256 proposalId, bool doRecount)`: Can be used to contest
  * during the contesting period.
- * - `executeProposal(uint projectId, uint proposalId)`: Executes the changes proposed if approved
+ * - `executeProposal(uint256 projectId, uint256 proposalId)`: Executes the changes proposed if approved
  * and the contesting period has passed.
  */
 contract Proposal is Common, Initializable, IProposal {
@@ -45,13 +45,13 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Stores proposal data for each project
      * @dev Nested mapping of project ID to proposal ID to ProposalData
      */
-    mapping(uint => mapping(uint => ProposalData)) public proposals;
+    mapping(uint256 => mapping(uint256 => ProposalData)) public proposals;
 
     /**
      * @notice Tracks the next proposal ID for each project
      * @dev Mapping of project ID to the next proposal ID
      */
-    mapping(uint => uint) public nextProposalId;
+    mapping(uint256 => uint256) public nextProposalId;
 
     /**
      * @notice Struct for holding vote data
@@ -67,7 +67,7 @@ contract Proposal is Common, Initializable, IProposal {
         bool votingAllowed;
         bool willExecute;
         uint64 nrOfVoters;
-        uint endTime;
+        uint256 endTime;
         mapping(uint64 => address) voters;
         mapping(address => Vote) votes;
     }
@@ -79,7 +79,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @param proposalId The unique ID of the new proposal.
      * @param proposalType The type of the proposal.
      */
-    event NewProposal(uint projectId, uint proposalId, uint32 proposalType);
+    event NewProposal(uint256 projectId, uint256 proposalId, uint32 proposalType);
 
     /**
      * @notice Emitted when the vote count for a proposal is locked and its execution decision is finalized.
@@ -89,7 +89,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @param yesVotes The total number of yes votes the proposal received.
      * @param noVotes The total number of no votes the proposal received.
      */
-    event LockVoteCount(uint projectId, uint proposalId, bool willExecute, uint yesVotes, uint noVotes);
+    event LockVoteCount(uint256 projectId, uint256 proposalId, bool willExecute, uint256 yesVotes, uint256 noVotes);
 
     /**
      * @notice Emitted when a vote is cast on a proposal.
@@ -98,7 +98,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @param userAddress The address of the voter.
      * @param vote The vote cast by the voter.
      */
-    event VoteOnProposal(uint projectId, uint proposalId, address userAddress, bool vote);
+    event VoteOnProposal(uint256 projectId, uint256 proposalId, address userAddress, bool vote);
 
     /**
      * @notice Emitted when a proposal's active state is changed.
@@ -106,7 +106,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @param proposalId The ID of the proposal being modified.
      * @param value The new active state of the proposal.
      */
-    event ProposalSetActive(uint projectId, uint proposalId, bool value);
+    event ProposalSetActive(uint256 projectId, uint256 proposalId, bool value);
 
     /**
      * @notice Emitted when a proposal's willExecute state is set.
@@ -114,14 +114,14 @@ contract Proposal is Common, Initializable, IProposal {
      * @param proposalId The ID of the proposal being modified.
      * @param value The new willExecute state of the proposal.
      */
-    event ProposalSetWillExecute(uint projectId, uint proposalId, bool value);
+    event ProposalSetWillExecute(uint256 projectId, uint256 proposalId, bool value);
 
     /**
      * @notice Emitted when a proposal is deleted.
      * @param projectId The ID of the project for which the proposal is made.
      * @param proposalId The ID of the proposal being deleted.
      */
-    event ProposalDeleted(uint projectId, uint proposalId);
+    event ProposalDeleted(uint256 projectId, uint256 proposalId);
 
     /**
      * @notice Emitted when votes deemed as spam are removed from a proposal.
@@ -130,7 +130,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @
      * @param indexes The indexes of the voters removed from the proposal's voter list.
      */
-    event RemovedSpamVoters(uint projectId, uint proposalId, uint[] indexes);
+    event RemovedSpamVoters(uint256 projectId, uint256 proposalId, uint256[] indexes);
 
     /**
      * @notice Emitted when a proposal is successfully contested, which happens when:
@@ -141,7 +141,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @param yesVotes The total number of yes votes the proposal received before being contested.
      * @param noVotes The total number of no votes the proposal received before being contested.
      */
-    event ContestedProposal(uint projectId, uint proposalId, uint yesVotes, uint noVotes);
+    event ContestedProposal(uint256 projectId, uint256 proposalId, uint256 yesVotes, uint256 noVotes);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -167,7 +167,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Sets a proposal's active state
      * @dev Allows to activate or deactivate a proposal
      */
-    function setActive(uint projectId, uint proposalId, bool value) external restricted(projectId) {
+    function setActive(uint256 projectId, uint256 proposalId, bool value) external restricted(projectId) {
         proposals[projectId][proposalId].votingAllowed = value;
         emit ProposalSetActive(projectId, proposalId, value);
     }
@@ -176,7 +176,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Sets a proposal's willExecute state
      * @dev Allows setting whether a proposal will be executed or not
     */
-    function setWillExecute(uint projectId, uint proposalId, bool value) external restricted(projectId) {
+    function setWillExecute(uint256 projectId, uint256 proposalId, bool value) external restricted(projectId) {
         proposals[projectId][proposalId].willExecute = value;
         emit ProposalSetWillExecute(projectId, proposalId, value);
     }
@@ -185,7 +185,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Checks if an address has already voted on a proposal
      * @dev Utility function for checking vote status
     */
-    function hasVotedAlready(uint projectId, uint proposalId, address addr) public view returns (bool) {
+    function hasVotedAlready(uint256 projectId, uint256 proposalId, address addr) public view returns (bool) {
         return proposals[projectId][proposalId].votes[addr].hasVoted;
     }
 
@@ -193,7 +193,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Modifier to check if the caller has the minimum balance to vote
      * @dev Ensures the caller has enough tokens to participate in voting
     */
-    modifier hasMinBalance (uint projectId, address addr) {
+    modifier hasMinBalance (uint256 projectId, address addr) {
         require(contractsManagerContract.hasMinBalance(projectId, addr),
             "Not enough voting power.");
         _;
@@ -203,7 +203,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Allows voting on a proposal
      * @dev Records a vote on a proposal by an eligible voter
      */
-    function vote(uint projectId, uint proposalId, bool choice) public hasMinBalance(projectId, msg.sender) {
+    function vote(uint256 projectId, uint256 proposalId, bool choice) public hasMinBalance(projectId, msg.sender) {
         require(proposalId < nextProposalId[projectId] &&
         proposals[projectId][proposalId].votingAllowed,
             "Proposal does not exist or is inactive");
@@ -212,7 +212,7 @@ contract Proposal is Common, Initializable, IProposal {
         internal_vote(projectId, proposalId, choice);
     }
 
-    function internal_vote(uint projectId, uint proposalId, bool choice) internal {
+    function internal_vote(uint256 projectId, uint256 proposalId, bool choice) internal {
         ProposalData storage p = proposals[projectId][proposalId];
         if (!hasVotedAlready(projectId, proposalId, msg.sender)) {
             p.voters[p.nrOfVoters++] = msg.sender;
@@ -227,7 +227,7 @@ contract Proposal is Common, Initializable, IProposal {
      * - the VetoMinimumPercentage (percentage of circulating supply) has been met
      * @dev Allows a proposal to be contested and possibly invalidated
      */
-    function contestProposal(uint projectId, uint proposalId, bool doRecount) external returns (bool) {
+    function contestProposal(uint256 projectId, uint256 proposalId, bool doRecount) external returns (bool) {
         require(contractsManagerContract.hasMinBalance(projectId, msg.sender),
             "Not enough voting power.");
         ProposalData storage proposal = proposals[projectId][proposalId];
@@ -241,8 +241,8 @@ contract Proposal is Common, Initializable, IProposal {
         return processContest(projectId, proposalId);
     }
 
-    function processContest(uint projectId, uint proposalId) internal returns (bool) {
-        (uint yesVotes, uint noVotes) = getVoteCount(projectId, proposalId);
+    function processContest(uint256 projectId, uint256 proposalId) internal returns (bool) {
+        (uint256 yesVotes, uint256 noVotes) = getVoteCount(projectId, proposalId);
         if (noVotes >= parametersContract.neededToContest(projectId)) {
             delete proposals[projectId][proposalId];
             emit ContestedProposal(projectId, proposalId, yesVotes, noVotes);
@@ -261,7 +261,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Deletes a proposal
      * @dev Allows removal of a proposal from the system
      */
-    function deleteProposal(uint projectId, uint proposalId) external restricted(projectId) {
+    function deleteProposal(uint256 projectId, uint256 proposalId) external restricted(projectId) {
         delete proposals[projectId][proposalId];
         emit ProposalDeleted(projectId, proposalId);
     }
@@ -270,11 +270,11 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Creates a new proposal
      * @dev Internal function to initialize a proposal
      */
-    function createProposal(uint projectId, uint32 proposalType, address voterAddress) external restricted(projectId) {
+    function createProposal(uint256 projectId, uint32 proposalType, address voterAddress) external restricted(projectId) {
         privateCreateProposal(projectId, proposalType, voterAddress);
     }
 
-    function privateCreateProposal(uint projectId, uint32 proposalType, address voterAddress) private hasMinBalance(projectId, voterAddress)
+    function privateCreateProposal(uint256 projectId, uint32 proposalType, address voterAddress) private hasMinBalance(projectId, voterAddress)
     {
         ProposalData storage newProposal = proposals[projectId][nextProposalId[projectId]];
 
@@ -294,12 +294,12 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Identifies spam voters in a proposal
      * @dev Returns a list of voters who no longer meet the minimum voting power requirement
      */
-    function getSpamVoters(uint projectId, uint proposalId) external view returns (uint[] memory) {
-        uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
+    function getSpamVoters(uint256 projectId, uint256 proposalId) external view returns (uint256[] memory) {
+        uint256 minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
                             parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         ProposalData storage p = proposals[projectId][proposalId];
-        uint[] memory indexes = new uint[](p.nrOfVoters);
-        uint index = 0;
+        uint256[] memory indexes = new uint256[](p.nrOfVoters);
+        uint256 index = 0;
 
         for (uint64 i = 0; i < p.nrOfVoters; i++) {
             if (!delegatesContract.checkVotingPower(projectId, p.voters[i], minimum_amount)) {
@@ -321,23 +321,29 @@ contract Proposal is Common, Initializable, IProposal {
      * This can be necessary for projects with a high MaxNrOfVoters.
      * @dev Helps maintain integrity by removing spam or irrelevant votes
      */
-    function removeSpamVoters(uint projectId, uint proposalId, uint[] memory indexes) external {
+    function removeSpamVoters(uint256 projectId, uint256 proposalId, uint256[] memory indexes) external {
         address gitswarmAddress = parametersContract.gitswarmAddress();
-        uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) / parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
+        uint256 minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) / parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         emit RemovedSpamVoters(projectId, proposalId, indexes);
         ProposalData storage p = proposals[projectId][proposalId];
+        uint64 n = p.nrOfVoters;
         for (uint64 index = uint64(indexes.length); index > 0; index--) {
+            // enforce that indexes are sorted in ascending order
+            if (index < indexes.length) {
+                require(indexes[index] > indexes[index - 1], 'Unsorted indexes');
+            }
             // avoiding underflow when decrementing, that would have happened for value 0
             uint64 i = uint64(indexes[index - 1]);
-            require(i < p.nrOfVoters, "Index out of bounds");
+            require(i < n, "Index out of bounds");
             if(p.voters[i] == gitswarmAddress) {
                 continue;
             }
             if (!delegatesContract.checkVotingPower(projectId, p.voters[i], minimum_amount)) {
                 p.nrOfVoters--;
+                n--;
                 delete p.votes[p.voters[i]];
-                p.voters[i] = p.voters[p.nrOfVoters];
-                delete p.voters[p.nrOfVoters];
+                p.voters[i] = p.voters[n];
+                delete p.voters[n];
             }
         }
     }
@@ -346,10 +352,10 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Calculates the delegated voting power excluding voters who have already voted
      * @dev Utility function to calculate total voting power for a delegate
      */
-    function getDelegatedVotingPowerExcludingVoters(uint projectId, address delegatedAddr, uint proposalId, IERC20 tokenContract) public view returns (uint delegatedVotes) {
+    function getDelegatedVotingPowerExcludingVoters(uint256 projectId, address delegatedAddr, uint256 proposalId, IERC20 tokenContract) public view returns (uint256 delegatedVotes) {
         address[] memory delegations = delegatesContract.getDelegatorsOf(projectId, delegatedAddr);
         delegatedVotes = 0;
-        for (uint i = 0; i < delegations.length; i++) {
+        for (uint256 i = 0; i < delegations.length; i++) {
             if (delegations[i] != address(0) && !hasVotedAlready(projectId, proposalId, delegations[i])) {
                 delegatedVotes += tokenContract.balanceOf(delegations[i]);
             }
@@ -360,7 +366,7 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Calculates the total voting power of an address for a proposal
      * @dev Sums the balance of tokens and delegated tokens, excluding delegators who have already voted
      */
-    function calculateTotalVotingPower(uint projectId, address addr, uint id, IERC20 tokenContract) view public returns (uint) {
+    function calculateTotalVotingPower(uint256 projectId, address addr, uint256 id, IERC20 tokenContract) view public returns (uint256) {
         return tokenContract.balanceOf(addr) + getDelegatedVotingPowerExcludingVoters(projectId, addr, id, tokenContract);
     }
 
@@ -368,23 +374,36 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Retrieves the vote status and choice for an address on a proposal
      * @dev Utility function to check if an address has voted and their choice
      */
-    function getVotes(uint projectId, uint proposalId, address a) public view returns (bool, bool) {
+    function getVotes(uint256 projectId, uint256 proposalId, address a) public view returns (bool, bool) {
         Vote storage v = proposals[projectId][proposalId].votes[a];
         return (v.hasVoted, v.votedYes);
+    }
+
+    /**
+     * @notice Retrieves the list of voters on a proposal
+     */
+    function getVoters(uint256 projectId, uint256 proposalId) public view returns (address[] memory) {
+        ProposalData storage p = proposals[projectId][proposalId];
+        address[] memory voters = new address[](p.nrOfVoters);
+        for (uint64 i = 0; i < voters.length; i++) {
+            voters[i] = p.voters[i];
+        }
+        return voters;
     }
 
     /**
      * @notice Counts the yes and no votes for a proposal
      * @dev Aggregates the voting power of yes and no votes
      */
-    function getVoteCount(uint projectId, uint proposalId) public view returns (uint, uint) {
+    function getVoteCount(uint256 projectId, uint256 proposalId) public view returns (uint256, uint256) {
         IERC20 votingTokenContract = contractsManagerContract.votingTokenContracts(projectId);
-        uint yesVotes;
-        uint noVotes;
-        for (uint64 i = 0; i < proposals[projectId][proposalId].nrOfVoters; i++) {
-            address a = proposals[projectId][proposalId].voters[i];
-            Vote storage choice = proposals[projectId][proposalId].votes[a];
-            uint votingPower = calculateTotalVotingPower(projectId, a, proposalId, votingTokenContract);
+        uint256 yesVotes;
+        uint256 noVotes;
+        ProposalData storage p = proposals[projectId][proposalId];
+        for (uint64 i = 0; i < p.nrOfVoters; i++) {
+            address a = p.voters[i];
+            Vote storage choice = p.votes[a];
+            uint256 votingPower = calculateTotalVotingPower(projectId, a, proposalId, votingTokenContract);
             if (choice.votedYes) {
                 yesVotes += votingPower;
             } else {
@@ -399,8 +418,8 @@ contract Proposal is Common, Initializable, IProposal {
      * @notice Checks if the vote count meets the required percentage for a proposal to pass
      * @dev Compares the yes vote count against a required threshold
      */
-    function checkVoteCount(uint projectId, uint proposalId, uint requiredPercentage) public view returns (uint, uint, bool) {
-        (uint yesVotes, uint noVotes) = getVoteCount(projectId, proposalId);
+    function checkVoteCount(uint256 projectId, uint256 proposalId, uint256 requiredPercentage) public view returns (uint256, uint256, bool) {
+        (uint256 yesVotes, uint256 noVotes) = getVoteCount(projectId, proposalId);
         ProposalData storage p = proposals[projectId][proposalId];
 
         if (yesVotes == noVotes) {
@@ -414,14 +433,14 @@ contract Proposal is Common, Initializable, IProposal {
     /**
      * @notice Locks the vote count for a proposal and starts the contesting phase or deletes it if it did not pass
      */
-    function lockVoteCount(uint projectId, uint proposalId) external {
+    function lockVoteCount(uint256 projectId, uint256 proposalId) external {
         ProposalData storage p = proposals[projectId][proposalId];
         require(p.endTime <= block.timestamp, "Voting is ongoing");
         require(proposalId < nextProposalId[projectId] && p.votingAllowed,
             "Proposal does not exist or is inactive");
         require(p.endTime + parametersContract.parameters(projectId, keccak256("ExpirationPeriod")) >= block.timestamp, "Proposal expired");
-        uint yesVotes;
-        uint noVotes;
+        uint256 yesVotes;
+        uint256 noVotes;
         bool willExecute;
         if (p.typeOfProposal == CREATE_TOKENS) {
             (yesVotes, noVotes, willExecute) = checkVoteCount(projectId, proposalId, parametersContract.parameters(projectId, keccak256("RequiredVotingPowerPercentageToCreateTokens")));

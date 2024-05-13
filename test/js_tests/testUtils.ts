@@ -18,7 +18,6 @@ export const ethers = hre.ethers;
 export const provider = ethers.provider
 
 export const GITSWARM_ACCOUNT = new ethers.Wallet('26818dd2f0efc09e0ea155634ecfd27cc10694c61fdbcf190e50cd8645387bcf', provider);
-export const GITSWARM_ACCOUNT_ADDRESS = GITSWARM_ACCOUNT.address
 export const GS_PROJECT_DB_ID = 'gs'
 export const GS_PROJECT_ID = 0
 export const INFINITE_FUNDS_ACCOUNT_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -148,7 +147,7 @@ export async function initialDeployGsContracts(
 
     let contracts: Partial<Contracts> = {
         Delegates: {args: []},
-        Parameters: {args: [GITSWARM_ACCOUNT_ADDRESS]},
+        Parameters: {args: [GITSWARM_ACCOUNT.address]},
         Proposal: {args: []},
         GasStation: {args: []},
         UpgradableToken: {args: [tokenName, tokenSymbol, GS_PROJECT_DB_ID, fmSupply, tokenBufferAmount]},

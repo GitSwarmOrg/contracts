@@ -17,30 +17,30 @@ import "../../openzeppelin-v5.0.1/token/ERC20/IERC20.sol";
 contract ContractsManager is Common, Initializable, IContractsManager {
 
     /// Maps project IDs to their associated ERC20 voting token contracts
-    mapping(uint => IERC20) public votingTokenContracts;
+    mapping(uint256 => IERC20) public votingTokenContracts;
 
     /// Stores proposals for changing the voting token of a project
-    mapping(uint => mapping(uint => address)) public changeVotingTokenProposals;
+    mapping(uint256 => mapping(uint256 => address)) public changeVotingTokenProposals;
 
     /// Stores proposals for upgrading contracts associated with a project
-    mapping(uint => UpgradeContractsProposal) public upgradeContractsProposals;
+    mapping(uint256 => UpgradeContractsProposal) public upgradeContractsProposals;
 
     /// Stores proposals for adding new burn addresses for a project
-    mapping(uint => mapping(uint => address)) public addBurnAddressProposals;
+    mapping(uint256 => mapping(uint256 => address)) public addBurnAddressProposals;
 
     /// Stores burn addresses for each project,
     /// which are addresses where tokens can be sent to be considered "burned" or removed from circulation
-    mapping(uint => address[]) public burnAddresses;
+    mapping(uint256 => address[]) public burnAddresses;
 
     /// Counter for the next project ID to be assigned
-    uint public nextProjectId;
+    uint256 public nextProjectId;
 
     /**
      * @dev Emitted when a proposal is executed for a project.
      * @param projectId The ID of the project related to the proposal.
      * @param proposalId The ID of the proposal that was executed.
      */
-    event ExecuteProposal(uint projectId, uint proposalId);
+    event ExecuteProposal(uint256 projectId, uint256 proposalId);
 
     /**
      * @dev Emitted when a new project is created.
@@ -48,14 +48,14 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param dbProjectId The database ID of the new project.
      * @param tokenAddress The ERC20 voting token address associated with the new project.
      */
-    event CreateProject(uint contractProjectId, string dbProjectId, address tokenAddress);
+    event CreateProject(uint256 contractProjectId, string dbProjectId, address tokenAddress);
 
     /**
      * @dev Emitted when contracts associated with a project are upgraded.
      * @param projectId The ID of the project whose contracts were upgraded.
      * @param proposalId The ID of the proposal that initiated the upgrade.
      */
-    event ContractsUpgraded(uint projectId, uint proposalId);
+    event ContractsUpgraded(uint256 projectId, uint256 proposalId);
 
     /**
      * @dev Emitted when the voting token address is changed for a project.
@@ -63,7 +63,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param proposalId The ID of the proposal that initiated the change.
      * @param tokenAddress The new voting token address.
      */
-    event ChangeVotingTokenAddress(uint projectId, uint proposalId, address tokenAddress);
+    event ChangeVotingTokenAddress(uint256 projectId, uint256 proposalId, address tokenAddress);
 
     /**
      * @dev Emitted when a burn address is added for a project.
@@ -110,7 +110,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param projectId The ID of the project for which to retrieve burn addresses.
      * @return An array of burn addresses associated with the specified project.
      */
-    function getBurnAddresses(uint projectId) view external returns (address[] memory){
+    function getBurnAddresses(uint256 projectId) view external returns (address[] memory){
         return burnAddresses[projectId];
     }
 
@@ -120,10 +120,11 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param votingTokenContract The ERC20 voting token contract associated with the project.
      * @return The total amount of tokens burned.
      */
-    function burnedTokens(uint projectId, IERC20 votingTokenContract) public view returns (uint) {
-        uint amount = 0;
-        for (uint i = 0; i < burnAddresses[projectId].length; i++) {
-            amount += votingTokenContract.balanceOf(burnAddresses[projectId][i]);
+    function burnedTokens(uint256 projectId, IERC20 votingTokenContract) public view returns (uint256) {
+        uint256 amount = 0;
+        address[] storage p = burnAddresses[projectId];
+        for (uint256 i = 0; i < p.length; i++) {
+            amount += votingTokenContract.balanceOf(p[i]);
         }
         return amount;
     }
@@ -133,7 +134,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param projectId The ID of the project.
      * @return The circulating supply of the project's voting token.
      */
-    function votingTokenCirculatingSupply(uint projectId) public view returns (uint) {
+    function votingTokenCirculatingSupply(uint256 projectId) public view returns (uint256) {
         IERC20 votingTokenContract = votingTokenContracts[projectId];
         return votingTokenContract.totalSupply()
         - burnedTokens(projectId, votingTokenContract)
@@ -147,12 +148,12 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param addr The address to check.
      * @return True if the address holds the minimum required balance, false otherwise.
      */
-    function hasMinBalance(uint projectId, address addr) external view returns (bool) {
+    function hasMinBalance(uint256 projectId, address addr) external view returns (bool) {
         if (addr == parametersContract.gitswarmAddress()) {
             // GitSwarm is exempt, used for payroll proposals
             return true;
         }
-        uint required_amount = minimumRequiredAmount(projectId);
+        uint256 required_amount = minimumRequiredAmount(projectId);
         return delegatesContract.checkVotingPower(projectId, addr, required_amount);
     }
 
@@ -161,7 +162,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param projectId The ID of the project.
      * @return The minimum required amount of voting tokens.
      */
-    function minimumRequiredAmount(uint projectId) public view returns (uint) {
+    function minimumRequiredAmount(uint256 projectId) public view returns (uint256) {
         return votingTokenCirculatingSupply(projectId) /
             parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
     }
@@ -245,7 +246,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param projectId The ID of the project for which the voting token is to be changed.
      * @param tokenAddress The address of the new voting token contract.
      */
-    function proposeChangeVotingToken(uint projectId, address tokenAddress) external {
+    function proposeChangeVotingToken(uint256 projectId, address tokenAddress) external {
         require(tokenAddress != address(0), "Contract address can't be 0x0");
         require(isERC20Token(tokenAddress), "Address is not an ERC20 token contract");
         changeVotingTokenProposals[projectId][proposalContract.nextProposalId(projectId)] = tokenAddress;
@@ -257,7 +258,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param projectId The ID of the project for which a burn address is to be added.
      * @param burnAddress The address to be added as a new burn address.
      */
-    function proposeAddBurnAddress(uint projectId, address burnAddress) external {
+    function proposeAddBurnAddress(uint256 projectId, address burnAddress) external {
         addBurnAddressProposals[projectId][proposalContract.nextProposalId(projectId)] = burnAddress;
         proposalContract.createProposal(projectId, ADD_BURN_ADDRESS, msg.sender);
     }
@@ -268,9 +269,9 @@ contract ContractsManager is Common, Initializable, IContractsManager {
      * @param projectId The ID of the project for which the proposal is executed.
      * @param proposalId The ID of the proposal to be executed.
      */
-    function executeProposal(uint projectId, uint proposalId) external {
+    function executeProposal(uint256 projectId, uint256 proposalId) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
-        uint expirationPeriod = parametersContract.parameters(projectId, keccak256("ExpirationPeriod"));
+        uint256 expirationPeriod = parametersContract.parameters(projectId, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
         require(endTime + expirationPeriod >= block.timestamp, "Can't execute proposal, execute period has expired");
@@ -285,8 +286,9 @@ contract ContractsManager is Common, Initializable, IContractsManager {
             delete changeVotingTokenProposals[projectId][proposalId];
         } else if (typeOfProposal == ADD_BURN_ADDRESS) {
             address newBurnAddress = addBurnAddressProposals[projectId][proposalId];
-            for (uint i = 0; i < burnAddresses[projectId].length; i++) {
-                if (burnAddresses[projectId][i] == newBurnAddress) {
+            address[] storage p = burnAddresses[projectId];
+            for (uint256 i = 0; i < p.length; i++) {
+                if (p[i] == newBurnAddress) {
                     revert("Duplicate burn address not allowed");
                 }
             }

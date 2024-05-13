@@ -21,36 +21,36 @@ contract Parameters is Common, Initializable, IParameters {
      * @notice Stores change parameter proposals for each project
      * @dev Nested mapping of project ID to proposal ID to ChangeParameterProposal
      */
-    mapping(uint => mapping(uint => ChangeParameterProposal)) public changeParameterProposals;
+    mapping(uint256 => mapping(uint256 => ChangeParameterProposal)) public changeParameterProposals;
 
     /**
      * @notice New mapping to store just the value of parameters
      * @dev Mapping of project ID to parameter name (hashed) to its value
      */
-    mapping(uint => mapping(bytes32 => uint)) public parameters;
+    mapping(uint256 => mapping(bytes32 => uint256)) public parameters;
 
     /**
      * @notice Stores the min values for parameters globally
      * @dev Mapping of parameter name (hashed) to its minimum value
      */
-    mapping(bytes32 => uint) public parameterMinValues;
+    mapping(bytes32 => uint256) public parameterMinValues;
 
     /**
      * @notice Stores the max values for parameters globally
      * @dev Mapping of parameter name (hashed) to its maximum value
      */
-    mapping(bytes32 => uint) public parameterMaxValues;
+    mapping(bytes32 => uint256) public parameterMaxValues;
 
     /**
      * @notice Trusted addresses per project, may include other contracts or external addresses.
      * They can call any restricted methods, this enables them to send funds without proposals
      */
-    mapping(uint => mapping(address => bool)) public trustedAddresses;
+    mapping(uint256 => mapping(address => bool)) public trustedAddresses;
 
     /**
      * @notice Stores proposals for changing trusted addresses
      */
-    mapping(uint => mapping(uint => ChangeTrustedAddressProposal)) public changeTrustedAddressProposals;
+    mapping(uint256 => mapping(uint256 => ChangeTrustedAddressProposal)) public changeTrustedAddressProposals;
 
     /**
      * @notice Struct for holding change parameter proposal data
@@ -58,7 +58,7 @@ contract Parameters is Common, Initializable, IParameters {
      */
     struct ChangeParameterProposal {
         bytes32 parameterName;
-        uint value;
+        uint256 value;
     }
 
     /**
@@ -76,14 +76,14 @@ contract Parameters is Common, Initializable, IParameters {
      * @param trustedAddress The new trusted address.
      * @param value Whether the address should be trusted.
      */
-    event ChangeTrustedAddress(uint projectId, uint proposalId, address trustedAddress, bool value);
+    event ChangeTrustedAddress(uint256 projectId, uint256 proposalId, address trustedAddress, bool value);
 
     /**
      * @notice Emitted when a proposal is executed.
      * @param projectId The ID of the project for which the proposal is made.
      * @param proposalId The ID of the proposal being executed.
      */
-    event ExecuteProposal(uint projectId, uint proposalId);
+    event ExecuteProposal(uint256 projectId, uint256 proposalId);
 
     /**
      * @notice Emitted when the GitSwarm address is removed from the system.
@@ -145,7 +145,7 @@ contract Parameters is Common, Initializable, IParameters {
      * @notice Initializes parameters for a project
      * @dev Sets initial values for parameters for a given project
      */
-    function initializeParameters(uint projectId) external restricted(projectId) {
+    function initializeParameters(uint256 projectId) external restricted(projectId) {
         internalInitializeParameters(projectId);
     }
 
@@ -165,7 +165,7 @@ contract Parameters is Common, Initializable, IParameters {
     /**
      * @notice Proposes a change to a parameter's value
      */
-    function proposeParameterChange(uint projectId, bytes32 parameterName, uint value) external {
+    function proposeParameterChange(uint256 projectId, bytes32 parameterName, uint256 value) external {
         require(value >= parameterMinValues[parameterName] && value <= parameterMaxValues[parameterName], "Value out of range");
         changeParameterProposals[projectId][proposalContract.nextProposalId(projectId)] = ChangeParameterProposal({
             parameterName: parameterName,
@@ -181,7 +181,7 @@ contract Parameters is Common, Initializable, IParameters {
      * @param proposalId The ID of the proposal to execute.
      * This ID must correspond to an existing, valid, and approved proposal.
      */
-    function executeProposal(uint projectId, uint proposalId) external {
+    function executeProposal(uint256 projectId, uint256 proposalId) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Buffer time did not end yet");
@@ -195,7 +195,6 @@ contract Parameters is Common, Initializable, IParameters {
             ta[p.trustedAddress] = p.value;
 
             emit ChangeTrustedAddress(projectId, proposalId, p.trustedAddress, p.value);
-            proposalContract.deleteProposal(projectId, proposalId);
             delete changeTrustedAddressProposals[projectId][proposalId];
         } else if (typeOfProposal == CHANGE_PARAMETER) {
             parameters[projectId][changeParameterProposals[projectId][proposalId].parameterName] = changeParameterProposals[projectId][proposalId].value;
@@ -221,7 +220,7 @@ contract Parameters is Common, Initializable, IParameters {
      * @notice Returns the amount needed to contest a proposal
      * @dev Utility function to get the veto power requirement for contesting proposals
      */
-    function neededToContest(uint projectId) external view returns (uint) {
+    function neededToContest(uint256 projectId) external view returns (uint256) {
         return parameters[projectId][keccak256("VetoMinimumPercentage")] * contractsManagerContract.votingTokenCirculatingSupply(projectId) / 100;
     }
 
@@ -231,7 +230,7 @@ contract Parameters is Common, Initializable, IParameters {
      * @param trustedAddress The address to check.
      * @return True if the address is trusted, false otherwise.
      */
-    function isTrustedAddress(uint projectId, address trustedAddress) view public returns (bool) {
+    function isTrustedAddress(uint256 projectId, address trustedAddress) view public returns (bool) {
         if (
             trustedAddress == address(delegatesContract) ||
             trustedAddress == address(fundsManagerContract) ||
@@ -253,7 +252,7 @@ contract Parameters is Common, Initializable, IParameters {
      * @param trustedAddress The newly proposed trusted address.
      * @param value Whether the address should be trusted.
      */
-    function proposeChangeTrustedAddress(uint projectId, address trustedAddress, bool value) external {
+    function proposeChangeTrustedAddress(uint256 projectId, address trustedAddress, bool value) external {
         changeTrustedAddressProposals[projectId][proposalContract.nextProposalId(projectId)] = ChangeTrustedAddressProposal({
             trustedAddress: trustedAddress,
             value: value

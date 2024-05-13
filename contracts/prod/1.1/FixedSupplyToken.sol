@@ -13,7 +13,7 @@ import "./base/ERC20Base.sol";
  * @notice Deploy this contract for creating a token with a fixed supply.
  */
 contract FixedSupplyToken is ERC20Base {
-    uint immutable public projectId;
+    uint256 immutable public projectId;
     /**
      * @param prjId The project ID for the new token.
      * @param supply The total fixed supply of the token.
@@ -24,14 +24,11 @@ contract FixedSupplyToken is ERC20Base {
      * @param tokenName The name of the token.
      * @param tokenSymbol The symbol of the token.
      *
-     * Requirements:
-     * - `creatorSupply` must be non-zero.
-     * - Contract must have no pre-existing supply (`__totalSupply` == 0).
      */
     constructor(
         string memory prjId,
-        uint supply,
-        uint creatorSupply,
+        uint256 supply,
+        uint256 creatorSupply,
         address contractsManagerAddress,
         address fundsManagerContractAddress,
         address proposalContractAddress,

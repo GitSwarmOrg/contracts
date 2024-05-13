@@ -11,23 +11,23 @@ import "./ERC20Base.sol";
  * Allows proposals for creating additional tokens and disabling further creation.
  */
 contract ExpandableSupplyTokenBase is ERC20Base {
-    mapping(uint => CreateTokensProposal) public createTokensProposals;
-    uint public projectId;
+    mapping(uint256 => CreateTokensProposal) public createTokensProposals;
+    uint256 public projectId;
     bool public createMoreTokensDisabled = false;
     uint256[42] private __gap;
 
     /** @dev Emitted when a proposal is executed */
-    event ExecuteProposal(uint projectId, uint proposalId);
+    event ExecuteProposal(uint256 projectId, uint256 proposalId);
     /** @dev Emitted when initial tokens are created */
-    event InitialTokensCreated(uint supply, uint creatorSupply);
+    event InitialTokensCreated(uint256 supply, uint256 creatorSupply);
     /** @dev Emitted when tokens are created */
-    event TokensCreated(uint value);
+    event TokensCreated(uint256 value);
     /** @dev Emitted when creating more tokens is disabled */
     event CreateMoreTokensDisabledEvent();
 
     /** @dev Struct to hold proposals for creating tokens. */
     struct CreateTokensProposal {
-        uint amount;
+        uint256 amount;
     }
 
     /**
@@ -35,7 +35,7 @@ contract ExpandableSupplyTokenBase is ERC20Base {
      * @param supply Amount of tokens for the funds manager.
      * @param creatorSupply Amount of tokens for the contract creator.
      */
-    function createInitialTokens(uint supply, uint creatorSupply) internal {
+    function createInitialTokens(uint256 supply, uint256 creatorSupply) internal {
         require(__totalSupply == 0);
         projectId = contractsManagerContract.nextProjectId() - 1;
         __totalSupply = supply + creatorSupply;
@@ -50,7 +50,7 @@ contract ExpandableSupplyTokenBase is ERC20Base {
      * @param value The amount of tokens to create.
      * @return bool Returns true if tokens are successfully created.
      */
-    function createTokens(uint value) internal returns (bool) {
+    function createTokens(uint256 value) internal returns (bool) {
         __totalSupply += value;
         __balanceOf[address(fundsManagerContract)] += value;
         fundsManagerContract.updateBalance(projectId, address(this), value);
@@ -62,7 +62,7 @@ contract ExpandableSupplyTokenBase is ERC20Base {
      * @dev Proposes the creation of new tokens.
      * @param amount The amount of new tokens to create.
     */
-    function proposeCreateTokens(uint amount) external {
+    function proposeCreateTokens(uint256 amount) external {
         require(!createMoreTokensDisabled, "Increasing token supply is permanently disabled");
         createTokensProposals[proposalContract.nextProposalId(projectId)].amount = amount;
 
@@ -80,21 +80,20 @@ contract ExpandableSupplyTokenBase is ERC20Base {
      * @dev Executes a proposal based on its ID.
      * @param proposalId The ID of the proposal to execute.
      */
-    function executeProposal(uint proposalId) external {
+    function executeProposal(uint256 proposalId) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(projectId, proposalId);
-        uint expirationPeriod = parametersContract.parameters(projectId, keccak256("ExpirationPeriod"));
+        uint256 expirationPeriod = parametersContract.parameters(projectId, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(projectId), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
         require(endTime + expirationPeriod >= block.timestamp, "Can't execute proposal, execute period has expired");
         require(willExecute, "Can't execute, proposal was rejected or vote count was not locked");
         proposalContract.setWillExecute(projectId, proposalId, false);
-        uint value = parametersContract.parameters(projectId, keccak256("RequiredVotingPowerPercentageToCreateTokens"));
+        uint256 value = parametersContract.parameters(projectId, keccak256("RequiredVotingPowerPercentageToCreateTokens"));
         (,, bool checkVotes) = proposalContract.checkVoteCount(projectId, proposalId, value);
         if (typeOfProposal == CREATE_TOKENS) {
             require(checkVotes, "RequiredVotingPowerPercentageToCreateTokens not met");
-            uint amount = createTokensProposals[proposalId].amount;
+            uint256 amount = createTokensProposals[proposalId].amount;
             delete createTokensProposals[proposalId];
-            proposalContract.deleteProposal(projectId, proposalId);
             createTokens(amount);
         } else if (typeOfProposal == DISABLE_CREATE_MORE_TOKENS) {
             createMoreTokensDisabled = true;
@@ -102,6 +101,7 @@ contract ExpandableSupplyTokenBase is ERC20Base {
         } else {
             revert('Unexpected proposal type');
         }
+        proposalContract.deleteProposal(projectId, proposalId);
         emit ExecuteProposal(projectId, proposalId);
     }
 }

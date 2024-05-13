@@ -26,14 +26,11 @@ contract ExpandableSupplyToken is ExpandableSupplyTokenBase {
      * @param tokenName The name of the token.
      * @param tokenSymbol The symbol of the token.
      *
-     * Requirements:
-     * - `creatorSupply` must be non-zero.
-     * - Contract must have no pre-existing supply (`__totalSupply` == 0).
      */
     constructor(
         string memory prjId,
-        uint supply,
-        uint creatorSupply,
+        uint256 supply,
+        uint256 creatorSupply,
         address contractsManagerAddress,
         address fundsManagerContractAddress,
         address proposalContractAddress,

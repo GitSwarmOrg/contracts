@@ -16,7 +16,7 @@ contract GasStation is Common, Initializable, IGasStation {
 
     /// @notice Mapping from proposal ID to TransferToGasAddressProposal details.
     /// @dev This mapping stores the details of proposals for transferring ETH to specific gas addresses.
-    mapping(uint => TransferToGasAddressProposal) public transferToGasAddressProposals;
+    mapping(uint256 => TransferToGasAddressProposal) public transferToGasAddressProposals;
 
     /**
      * @dev Struct to hold proposals for transferring ETH to gas addresses.
@@ -24,7 +24,7 @@ contract GasStation is Common, Initializable, IGasStation {
      * @param to The recipient address of the ETH.
      */
     struct TransferToGasAddressProposal {
-        uint amount;
+        uint256 amount;
         address to;
     }
 
@@ -34,21 +34,21 @@ contract GasStation is Common, Initializable, IGasStation {
      * @param projectId The ID of the project for which gas is being bought.
      * @param amount The amount of ETH bought by the user.
      */
-    event BuyGasEvent(uint projectId, uint amount);
+    event BuyGasEvent(uint256 projectId, uint256 amount);
 
     /**
      * @dev Emitted when a proposal for transferring ETH from the project balance to the gas fund is executed.
      * @param projectId The ID of the project associated with the proposal.
      * @param proposalId The ID of the executed proposal.
      */
-    event ExecuteProposal(uint projectId, uint proposalId);
+    event ExecuteProposal(uint256 projectId, uint256 proposalId);
 
     /**
      * @dev Emitted after ETH has been successfully transferred to a project's gas fund.
      * @param toAddress The recipient address of the ETH.
      * @param amount The amount of ETH transferred.
      */
-    event TransferredGas(address toAddress, uint amount);
+    event TransferredGas(address toAddress, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -81,7 +81,7 @@ contract GasStation is Common, Initializable, IGasStation {
      * @param projectId The ID of the project for which gas is being bought.
      * @notice This function is payable and requires the sent value to be greater than 0.
      */
-    function buyGasForProject(uint projectId) payable external {
+    function buyGasForProject(uint256 projectId) payable external {
         require(msg.value > 0, "Value must be greater than zero");
         emit BuyGasEvent(projectId, msg.value);
     }
@@ -92,7 +92,7 @@ contract GasStation is Common, Initializable, IGasStation {
      * @param to The recipient address of the ETH.
      * @notice The proposal is recorded and will be executed upon approval.
      */
-    function proposeTransferToGasAddress(uint amount, address to) external {
+    function proposeTransferToGasAddress(uint256 amount, address to) external {
         transferToGasAddressProposals[proposalContract.nextProposalId(0)].amount = amount;
         transferToGasAddressProposals[proposalContract.nextProposalId(0)].to = to;
 
@@ -104,9 +104,9 @@ contract GasStation is Common, Initializable, IGasStation {
      * @param proposalId The ID of the proposal to execute.
      * @notice Requires the proposal to exist, to be executable based on timing, and to have been approved.
      */
-    function executeProposal(uint proposalId) external {
+    function executeProposal(uint256 proposalId) external {
         (uint32 typeOfProposal, , bool willExecute,, uint256 endTime) = proposalContract.proposals(0, proposalId);
-        uint expirationPeriod = parametersContract.parameters(0, keccak256("ExpirationPeriod"));
+        uint256 expirationPeriod = parametersContract.parameters(0, keccak256("ExpirationPeriod"));
         require(proposalId < proposalContract.nextProposalId(0), "Proposal does not exist");
         require(endTime <= block.timestamp, "Can't execute proposal, buffer time did not end yet");
         require(endTime + expirationPeriod >= block.timestamp, "Can't execute proposal, execute period has expired");
@@ -115,7 +115,7 @@ contract GasStation is Common, Initializable, IGasStation {
 
         if (typeOfProposal == TRANSFER_TO_GAS_ADDRESS) {
             address payable to_address = payable(transferToGasAddressProposals[proposalId].to);
-            uint amount = transferToGasAddressProposals[proposalId].amount;
+            uint256 amount = transferToGasAddressProposals[proposalId].amount;
             require(payable(address(this)).balance >= amount, "Insufficient balance");
             delete transferToGasAddressProposals[proposalId];
             proposalContract.deleteProposal(0, proposalId);

@@ -129,7 +129,7 @@ describe("expandable supply token", function () {
 
     it('should fail when transferring to the zero address', async function () {
         await expect(tokenContract.transfer(ethers.ZeroAddress, 100n))
-            .to.be.revertedWith('Token: sending to null is forbidden');
+            .to.be.revertedWith('Token: sending to address(0) is forbidden');
     });
 
     it('should fail when transferring with insufficient balance', async function () {
@@ -156,7 +156,7 @@ describe("expandable supply token", function () {
         await tokenContract.connect(c.accounts[0]).approve(c.accounts[1].address, 100n);
 
         await expect(tokenContract.connect(c.accounts[1]).transferFrom(c.accounts[0].address, ethers.ZeroAddress, 100n))
-            .to.be.revertedWith('Token: sending to null is forbidden');
+            .to.be.revertedWith('Token: sending to address(0) is forbidden');
     });
 
     it('should fail when transferring from with insufficient balance', async function () {

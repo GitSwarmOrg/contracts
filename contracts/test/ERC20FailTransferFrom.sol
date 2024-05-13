@@ -30,7 +30,7 @@ contract ERC20FailTransferFrom is ERC20Base {
 
     function transferFrom(address _from, address _to, uint _value) virtual override external returns (bool success) {
         require(__allowances[_from][msg.sender] >= _value, "Token: insufficient allowance");
-        require(_to != address(0), "Token: sending to null is forbidden");
+        require(_to != address(0), "Token: sending to address(0) is forbidden");
         require(__balanceOf[_from] >= _value, "Token: insufficient balance");
         __balanceOf[_from] -= _value;
         __balanceOf[_to] += _value;

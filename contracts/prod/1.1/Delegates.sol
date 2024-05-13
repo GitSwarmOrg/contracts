@@ -14,13 +14,13 @@ contract Delegates is Common, Initializable, IDelegates {
      * @notice Mapping of projectId to delegator address and their array of delegates.
      * @dev key - delegated address, value - array of delegateOf address
      */
-    mapping(uint => mapping(address => address[])) public delegations;
+    mapping(uint256 => mapping(address => address[])) public delegations;
 
     /**
      * @notice Mapping of projectId to delegator address to their delegated address.
      * @dev key - delegator address, value - delegated address
      */
-    mapping(uint => mapping(address => address)) public delegateOf;
+    mapping(uint256 => mapping(address => address)) public delegateOf;
 
     /**
      * @notice Event emitted when a new delegation is made.
@@ -74,7 +74,7 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param delegatedAddress The address of the delegate.
      * @return An array of addresses who have delegated to the given address for the specified project.
      */
-    function getDelegatorsOf(uint projectId, address delegatedAddress) view public returns (address[] memory){
+    function getDelegatorsOf(uint256 projectId, address delegatedAddress) view public returns (address[] memory){
         return delegations[projectId][delegatedAddress];
     }
 
@@ -84,11 +84,11 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param delegatedAddr The address whose total delegated voting power is being calculated.
      * @return delegatedVotingPower The total voting power delegated to the given address.
      */
-    function getDelegatedVotingPower(uint projectId, address delegatedAddr) external view returns (uint delegatedVotingPower) {
+    function getDelegatedVotingPower(uint256 projectId, address delegatedAddr) external view returns (uint256 delegatedVotingPower) {
         IERC20 tokenContract = contractsManagerContract.votingTokenContracts(projectId);
         address[] memory delegatesOfDelegatedAddr = getDelegatorsOf(projectId, delegatedAddr);
         delegatedVotingPower = 0;
-        for (uint i = 0; i < delegatesOfDelegatedAddr.length; i++) {
+        for (uint256 i = 0; i < delegatesOfDelegatedAddr.length; i++) {
             delegatedVotingPower += tokenContract.balanceOf(delegatesOfDelegatedAddr[i]);
         }
     }
@@ -100,14 +100,14 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param minVotingPower The minimum amount of voting power required.
      * @return True if the address has at least the specified amount of voting power, false otherwise.
      */
-    function checkVotingPower(uint projectId, address addr, uint minVotingPower) public view returns (bool) {
+    function checkVotingPower(uint256 projectId, address addr, uint256 minVotingPower) public view returns (bool) {
         IERC20 tokenContract = contractsManagerContract.votingTokenContracts(projectId);
-        uint delegatedPower = tokenContract.balanceOf(addr);
+        uint256 delegatedPower = tokenContract.balanceOf(addr);
         if (delegatedPower >= minVotingPower) {
             return true;
         }
         address[] memory _delegations = delegations[projectId][addr];
-        for (uint i = 0; i < _delegations.length; i++) {
+        for (uint256 i = 0; i < _delegations.length; i++) {
             delegatedPower += tokenContract.balanceOf(_delegations[i]);
             if (delegatedPower >= minVotingPower) {
                 return true;
@@ -120,7 +120,7 @@ contract Delegates is Common, Initializable, IDelegates {
      * @notice Removes the current delegation for a sender if it exists, to allow for a new delegation.
      * @param projectId The ID of the project for which the delegation is being removed.
      */
-    function removeIfAlreadyDelegated(uint projectId) private {
+    function removeIfAlreadyDelegated(uint256 projectId) private {
         if (delegateOf[projectId][msg.sender] != address(0)) {
             undelegate(projectId);
         }
@@ -131,11 +131,11 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param projectId The ID of the project.
      * @param delegatedAddr The address to which the caller's voting power is being delegated.
      */
-    function delegate(uint projectId, address delegatedAddr) external {
+    function delegate(uint256 projectId, address delegatedAddr) external {
         IERC20 tokenContract = contractsManagerContract.votingTokenContracts(projectId);
         require(delegatedAddr != msg.sender && delegateOf[projectId][delegatedAddr] != msg.sender,
             "Can't delegate to yourself");
-        uint minVotingPower = contractsManagerContract.minimumRequiredAmount(projectId);
+        uint256 minVotingPower = contractsManagerContract.minimumRequiredAmount(projectId);
         require(tokenContract.balanceOf(msg.sender) >= minVotingPower, "Not enough direct voting power");
 
         //check if it is already delegated
@@ -150,7 +150,7 @@ contract Delegates is Common, Initializable, IDelegates {
      * @notice Removes the delegation for the caller's address.
      * @param projectId The ID of the project for which the delegation is being removed.
      */
-    function undelegate(uint projectId) public {
+    function undelegate(uint256 projectId) public {
         undelegateAddress(projectId, msg.sender);
     }
 
@@ -159,12 +159,13 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param projectId The ID of the project.
      * @param addr The address for which the delegation is being removed.
      */
-    function undelegateAddress(uint projectId, address addr) private {
+    function undelegateAddress(uint256 projectId, address addr) private {
         address[] storage delegates_array = delegations[projectId][delegateOf[projectId][addr]];
-        for (uint i = 0; i < delegates_array.length; i++) {
+        uint256 l = delegates_array.length;
+        for (uint256 i = 0; i < l; i++) {
             if (delegates_array[i] == addr) {
                 // When the entry is removed, copy the last element into its position and reduce the length by 1
-                delegates_array[i] = delegates_array[delegates_array.length - 1];
+                delegates_array[i] = delegates_array[l - 1];
                 delegates_array.pop();
                 break;
             }
@@ -177,10 +178,11 @@ contract Delegates is Common, Initializable, IDelegates {
      * @notice Removes all delegations from the caller to other addresses for a specific project.
      * @param projectId The ID of the project.
      */
-    function undelegateAllFromAddress(uint projectId) external {
-        for (uint i = delegations[projectId][msg.sender].length; i > 0; i--) {
-            delete delegateOf[projectId][delegations[projectId][msg.sender][i - 1]];
-            delegations[projectId][msg.sender].pop();
+    function undelegateAllFromAddress(uint256 projectId) external {
+        address[] storage d = delegations[projectId][msg.sender];
+        for (uint256 i = d.length; i > 0; i--) {
+            delete delegateOf[projectId][d[i - 1]];
+            d.pop();
         }
         emit UndelegateAllFromSelfEvent(msg.sender);
     }
@@ -191,12 +193,12 @@ contract Delegates is Common, Initializable, IDelegates {
      * @param addresses Array of delegate addresses to check and potentially remove.
      * @param indexes Array of indexes corresponding to the delegate addresses in the project's delegation list.
      */
-    function removeSpamDelegates(uint projectId, address[] calldata addresses, uint[] calldata indexes) external {
-        uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
+    function removeSpamDelegates(uint256 projectId, address[] calldata addresses, uint256[] calldata indexes) external {
+        uint256 minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
                             parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         require(addresses.length == indexes.length, "addresses and indexes must have same length");
-        for (uint ii = addresses.length; ii > 0; ii--) {
-            uint i = ii - 1;
+        for (uint256 ii = addresses.length; ii > 0; ii--) {
+            uint256 i = ii - 1;
             if (!checkVotingPower(projectId, addresses[i], minimum_amount)) {
                 address[] storage current_delegates = delegations[projectId][delegateOf[projectId][addresses[i]]];
                 require(addresses[i] == current_delegates[indexes[i]], "Wrong index for address.");
@@ -215,15 +217,15 @@ contract Delegates is Common, Initializable, IDelegates {
      * @return addresses Array of spam delegate addresses.
      * @return indexes Array of indexes corresponding to the spam delegate addresses in the project's delegation list.
      */
-    function getSpamDelegates(uint projectId, address delegatedAddr) external view returns (address[] memory, uint[] memory) {
-        uint minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
+    function getSpamDelegates(uint256 projectId, address delegatedAddr) external view returns (address[] memory, uint256[] memory) {
+        uint256 minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
                             parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         address[] storage delegates_array = delegations[projectId][delegatedAddr];
         address[] memory addresses = new address[](delegates_array.length);
-        uint[] memory indexes = new uint[](delegates_array.length);
-        uint index = 0;
+        uint256[] memory indexes = new uint256[](delegates_array.length);
+        uint256 index = 0;
 
-        for (uint i = 0; i < delegates_array.length; i++) {
+        for (uint256 i = 0; i < delegates_array.length; i++) {
             if (!checkVotingPower(projectId, delegates_array[i], minimum_amount)) {
                 addresses[index] = delegates_array[i];
                 indexes[index] = i;

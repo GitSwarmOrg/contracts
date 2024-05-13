@@ -1,6 +1,6 @@
 import {
     deployContractAndWait,
-    GITSWARM_ACCOUNT_ADDRESS,
+    GITSWARM_ACCOUNT,
     GS_PROJECT_ID,
     increaseTime, sendEth,
     signer,
@@ -226,11 +226,11 @@ describe("ContractsManager", function () {
     });
 
     it("hasMinBalance should return true for gitswarmAddress", async function () {
-        expect(await c.contractsManagerContract.hasMinBalance(c.pId, GITSWARM_ACCOUNT_ADDRESS)).to.be.true;
+        expect(await c.contractsManagerContract.hasMinBalance(c.pId, GITSWARM_ACCOUNT.address)).to.be.true;
     });
 
     it("isERC20Token should return false for regular address", async function () {
-        expect(await c.contractsManagerContract.isERC20Token(GITSWARM_ACCOUNT_ADDRESS)).to.be.false;
+        expect(await c.contractsManagerContract.isERC20Token(GITSWARM_ACCOUNT.address)).to.be.false;
     })
 
     it("should fail if the proposal does not exist", async function () {

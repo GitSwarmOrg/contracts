@@ -1,8 +1,8 @@
 import {deployContractAndWait, increaseTime, signer, TestBase} from "./testUtils";
 import hre from "hardhat";
 import {expect} from "chai";
-import {ERC20Base} from "../../typechain-types/prod/1.1/base";
 import {BigNumberish, NonceManager, Typed} from "ethers";
+import {ERC20Base} from "../../typechain-types";
 
 const ethers = hre.ethers;
 describe("FundsManagerTests", function () {
@@ -128,6 +128,14 @@ describe("FundsManagerTests", function () {
 
         await expect(c.fundsManagerContract.connect(c.accounts[1]).reclaimFunds(c.pId, 5000n * DECIMALS, []))
             .to.be.revertedWith("insufficient balance");
+    });
+
+    it("should fail to reclaim funds with cannot reclaim for 0 tokens error", async function () {
+        await c.tokenContract.connect(c.accounts[1]).transfer(await c.fundsManagerContract.getAddress(), 75n * DECIMALS);
+        await c.tokenContract.connect(c.accounts[1]).approve(await c.fundsManagerContract.getAddress(), 20000n * DECIMALS);
+
+        await expect(c.fundsManagerContract.connect(c.accounts[1]).reclaimFunds(c.pId, 0n, []))
+            .to.be.revertedWith("cannot reclaim for 0 tokens");
     });
 
     it("should fail to reclaim funds for token contracts for which FM has no balance", async function () {
@@ -473,6 +481,13 @@ describe("FundsManagerTests", function () {
 
         await expect(c.fundsManagerContract.sendEther(c.pId, c.accounts[0].address, ethers.parseEther("1")))
             .to.be.revertedWith("Not enough Ether on FundsManager");
+    });
+
+    it("should fail to send ether to address(0)", async function () {
+        await c.setTrustedAddress(signer.address);
+
+        await expect(c.fundsManagerContract.sendEther(c.pId, ethers.ZeroAddress, ethers.parseEther("1")))
+            .to.be.revertedWith("Sending to address(0) is forbidden");
     });
 
     it("should fail to update balance from non-trusted address", async function () {

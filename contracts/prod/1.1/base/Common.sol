@@ -42,7 +42,7 @@ contract Common is Constants {
      * @notice Restricts function access to trusted addresses for the specified project.
      * @param projectId The ID of the project for which to check address trust.
      */
-    modifier restricted(uint projectId) {
+    modifier restricted(uint256 projectId) {
         require(parametersContract.isTrustedAddress(projectId, msg.sender), "Restricted function");
         _;
     }

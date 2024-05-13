@@ -30,7 +30,7 @@ contract ERC20FailTransfer is ERC20Base {
 
 
     function transfer(address _to, uint _value) virtual override external returns (bool success) {
-        require(_to != address(0), "Token: sending to null is forbidden");
+        require(_to != address(0), "Token: sending to address(0) is forbidden");
         require(_value <= __balanceOf[msg.sender], "Token: insufficient balance");
         __balanceOf[msg.sender] -= _value;
         __balanceOf[_to] += _value;
