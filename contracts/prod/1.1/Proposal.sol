@@ -295,13 +295,17 @@ contract Proposal is Common, Initializable, IProposal {
      * @dev Returns a list of voters who no longer meet the minimum voting power requirement
      */
     function getSpamVoters(uint256 projectId, uint256 proposalId) external view returns (uint256[] memory) {
+        address gitswarmAddress = parametersContract.gitswarmAddress();
         uint256 minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
                             parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         ProposalData storage p = proposals[projectId][proposalId];
-        uint256[] memory indexes = new uint256[](p.nrOfVoters);
+        uint64 nr = p.nrOfVoters;
+        uint256[] memory indexes = new uint256[](nr);
         uint256 index = 0;
-
-        for (uint64 i = 0; i < p.nrOfVoters; i++) {
+        for (uint64 i = 0; i < nr; i++) {
+            if(p.voters[i] == gitswarmAddress) {
+                continue;
+            }
             if (!delegatesContract.checkVotingPower(projectId, p.voters[i], minimum_amount)) {
                 indexes[index] = i;
                 index++;

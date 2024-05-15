@@ -76,13 +76,12 @@ describe("Proposal", function () {
         expect(await c.tokenContract.balanceOf(c.accounts[2].address)).to.equal(0n);
 
         let spamVoters = await proposalContract.getSpamVoters(c.pId, proposalId);
-        expect(spamVoters).to.have.lengthOf(3);
-        expect(spamVoters).to.deep.equal([0n, 1n, 2n]);
+        expect(spamVoters).to.deep.equal([1n, 2n]);
 
         expect(await proposalContract.getVoters(c.pId, proposalId)).to.deep.equal(
             [GITSWARM_ACCOUNT.address, c.accounts[1].address, c.accounts[2].address, c.accounts[3].address])
 
-        await proposalContract.removeSpamVoters(c.pId, proposalId, [...spamVoters]);
+        await proposalContract.removeSpamVoters(c.pId, proposalId, [0n,...spamVoters]);
 
         const proposal = await proposalContract.proposals(c.pId, proposalId);
         expect(proposal.nrOfVoters).to.equal(2);
@@ -91,7 +90,7 @@ describe("Proposal", function () {
             [GITSWARM_ACCOUNT.address, c.accounts[3].address])
 
         spamVoters = await proposalContract.getSpamVoters(c.pId, proposalId);
-        expect(spamVoters).to.deep.equal([0n]);
+        expect(spamVoters).to.deep.equal([]);
 
         expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[3].address)).to.be.true;
         expect(await proposalContract.hasVotedAlready(c.pId, proposalId, GITSWARM_ACCOUNT.address)).to.be.true;
@@ -112,8 +111,7 @@ describe("Proposal", function () {
         expect(await c.tokenContract.balanceOf(c.accounts[2].address)).to.equal(0n);
 
         let spamVoters = await proposalContract.getSpamVoters(c.pId, proposalId);
-        expect(spamVoters).to.have.lengthOf(3);
-        expect(spamVoters).to.deep.equal([1n, 2n, 3n]);
+        expect(spamVoters).to.deep.equal([1n, 2n]);
 
         expect(await proposalContract.getVoters(c.pId, proposalId)).to.deep.equal(
             [c.accounts[3].address, c.accounts[1].address, c.accounts[2].address, GITSWARM_ACCOUNT.address])
@@ -127,8 +125,10 @@ describe("Proposal", function () {
             [c.accounts[3].address, GITSWARM_ACCOUNT.address])
 
         spamVoters = await proposalContract.getSpamVoters(c.pId, proposalId);
-        expect(spamVoters).to.deep.equal([1n]);
+        expect(spamVoters).to.deep.equal([]);
 
+        expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[1].address)).to.be.false;
+        expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[2].address)).to.be.false;
         expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[3].address)).to.be.true;
         expect(await proposalContract.hasVotedAlready(c.pId, proposalId, GITSWARM_ACCOUNT.address)).to.be.true;
     });
@@ -148,8 +148,7 @@ describe("Proposal", function () {
         expect(await c.tokenContract.balanceOf(c.accounts[2].address)).to.equal(0n);
 
         let spamVoters = await proposalContract.getSpamVoters(c.pId, proposalId);
-        expect(spamVoters).to.have.lengthOf(3);
-        expect(spamVoters).to.deep.equal([0n, 2n, 3n]);
+        expect(spamVoters).to.deep.equal([2n, 3n]);
 
         expect(await proposalContract.getVoters(c.pId, proposalId)).to.deep.equal(
             [GITSWARM_ACCOUNT.address, c.accounts[3].address, c.accounts[1].address, c.accounts[2].address])
@@ -163,8 +162,10 @@ describe("Proposal", function () {
             [GITSWARM_ACCOUNT.address, c.accounts[3].address])
 
         spamVoters = await proposalContract.getSpamVoters(c.pId, proposalId);
-        expect(spamVoters).to.deep.equal([0n]);
+        expect(spamVoters).to.deep.equal([]);
 
+        expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[1].address)).to.be.false;
+        expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[2].address)).to.be.false;
         expect(await proposalContract.hasVotedAlready(c.pId, proposalId, c.accounts[3].address)).to.be.true;
         expect(await proposalContract.hasVotedAlready(c.pId, proposalId, GITSWARM_ACCOUNT.address)).to.be.true;
     });

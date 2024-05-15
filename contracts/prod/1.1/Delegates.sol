@@ -224,8 +224,8 @@ contract Delegates is Common, Initializable, IDelegates {
         address[] memory addresses = new address[](delegates_array.length);
         uint256[] memory indexes = new uint256[](delegates_array.length);
         uint256 index = 0;
-
-        for (uint256 i = 0; i < delegates_array.length; i++) {
+        uint256 l = delegates_array.length;
+        for (uint256 i = 0; i < l; i++) {
             if (!checkVotingPower(projectId, delegates_array[i], minimum_amount)) {
                 addresses[index] = delegates_array[i];
                 indexes[index] = i;

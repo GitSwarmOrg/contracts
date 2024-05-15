@@ -123,7 +123,8 @@ contract ContractsManager is Common, Initializable, IContractsManager {
     function burnedTokens(uint256 projectId, IERC20 votingTokenContract) public view returns (uint256) {
         uint256 amount = 0;
         address[] storage p = burnAddresses[projectId];
-        for (uint256 i = 0; i < p.length; i++) {
+        uint256 l = p.length;
+        for (uint256 i = 0; i < l; i++) {
             amount += votingTokenContract.balanceOf(p[i]);
         }
         return amount;
@@ -287,7 +288,8 @@ contract ContractsManager is Common, Initializable, IContractsManager {
         } else if (typeOfProposal == ADD_BURN_ADDRESS) {
             address newBurnAddress = addBurnAddressProposals[projectId][proposalId];
             address[] storage p = burnAddresses[projectId];
-            for (uint256 i = 0; i < p.length; i++) {
+            uint256 l = p.length;
+            for (uint256 i = 0; i < l; i++) {
                 if (p[i] == newBurnAddress) {
                     revert("Duplicate burn address not allowed");
                 }
