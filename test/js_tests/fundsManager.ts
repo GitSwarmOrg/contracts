@@ -490,6 +490,13 @@ describe("FundsManagerTests", function () {
             .to.be.revertedWith("Sending to address(0) is forbidden");
     });
 
+    it("should fail to send tokens to address(0)", async function () {
+        await c.setTrustedAddress(signer.address);
+
+        await expect(c.fundsManagerContract.sendToken(c.pId, ethers.ZeroAddress, ethers.ZeroAddress, ethers.parseEther("1")))
+            .to.be.revertedWith("Sending to address(0) is forbidden");
+    });
+
     it("should fail to update balance from non-trusted address", async function () {
         await expect(c.fundsManagerContract.connect(c.accounts[0]).sendToken(c.pId, ethers.ZeroAddress, ethers.ZeroAddress, 100n * DECIMALS))
             .to.be.revertedWith("Restricted function");

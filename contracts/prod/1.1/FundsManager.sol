@@ -314,6 +314,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
      * @param amount The amount of tokens to transfer.
      */
     function sendToken(uint256 projectId, address tokenAddress, address receiver, uint256 amount) external restricted(projectId) {
+        require(receiver != address(0), "Sending to address(0) is forbidden");
         require(amount <= balances[projectId][tokenAddress], "Not enough tokens on FundsManager");
         balances[projectId][tokenAddress] -= amount;
         IERC20 tokenContract = IERC20(tokenAddress);
