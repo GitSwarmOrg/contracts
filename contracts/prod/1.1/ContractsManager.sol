@@ -182,6 +182,7 @@ contract ContractsManager is Common, Initializable, IContractsManager {
         }
         parametersContract.initializeParameters(nextProjectId);
         burnAddresses[nextProjectId].push(BURN_ADDRESS);
+        burnAddresses[nextProjectId].push(address(0));
         votingTokenContracts[nextProjectId] = IERC20(tokenContractAddress);
         emit CreateProject(nextProjectId, dbProjectId, tokenContractAddress);
         nextProjectId++;
