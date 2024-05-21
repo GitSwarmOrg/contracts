@@ -54,6 +54,14 @@ contract FundsManager is Common, Initializable, IFundsManager {
      */
     event Transfer(uint256 projectId, address tokenContractAddress, address recipient, uint256 amount);
     /**
+     * @dev Emitted when a transfer of tokens or ETH is made from a project to another project.
+     * @param projectId The ID of the project for which the transfer is made.
+     * @param tokenContractAddress The address of the token being transferred, or address(0) for ETH.
+     * @param recipient The project ID receiving the tokens or ETH.
+     * @param amount The amount being transferred.
+     */
+    event ProjectToProjectTransfer(uint256 projectId, address tokenContractAddress, uint256 recipient, uint256 amount);
+    /**
      * @dev Emitted when tokens are deposited to a project's balance.
      * @param tokenAddress The address of the token being deposited.
      * @param projectId The ID of the project receiving the deposit.
@@ -248,6 +256,7 @@ contract FundsManager is Common, Initializable, IFundsManager {
             if (to == address(0)) {
                 balances[projectId][tokenAddress[i]] -= amount[i];
                 balances[depositToProjectId[i]][tokenAddress[i]] += amount[i];
+                emit ProjectToProjectTransfer(projectId, tokenAddress[i], depositToProjectId[i], amount[i]);
             } else {
                 if (tokenAddress[i] == address(0)) {
                     balances[projectId][address(0)] -= amount[i];

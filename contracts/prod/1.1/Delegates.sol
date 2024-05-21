@@ -221,10 +221,10 @@ contract Delegates is Common, Initializable, IDelegates {
         uint256 minimum_amount = contractsManagerContract.votingTokenCirculatingSupply(projectId) /
                             parametersContract.parameters(projectId, keccak256("MaxNrOfVoters"));
         address[] storage delegates_array = delegations[projectId][delegatedAddr];
-        address[] memory addresses = new address[](delegates_array.length);
-        uint256[] memory indexes = new uint256[](delegates_array.length);
-        uint256 index = 0;
         uint256 l = delegates_array.length;
+        address[] memory addresses = new address[](l);
+        uint256[] memory indexes = new uint256[](l);
+        uint256 index = 0;
         for (uint256 i = 0; i < l; i++) {
             if (!checkVotingPower(projectId, delegates_array[i], minimum_amount)) {
                 addresses[index] = delegates_array[i];
