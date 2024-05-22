@@ -24,7 +24,6 @@ describe("FundsManagerTests", function () {
         [neptuneTokenContract] = await deployContractAndWait({
                 contractNameOrPath: "ExpandableSupplyToken",
                 deployArgs: ["PROJ_DB_ID",
-                    10000n * DECIMALS,
                     1000n * DECIMALS,
                     await c.contractsManagerContract.getAddress(),
                     await c.fundsManagerContract.getAddress(),
@@ -41,7 +40,6 @@ describe("FundsManagerTests", function () {
         let saturnDeployment = await deployContractAndWait({
                 contractNameOrPath: "ExpandableSupplyToken",
                 deployArgs: ["PROJ_DB_ID2",
-                    10000n * DECIMALS,
                     1000n * DECIMALS,
                     await c.contractsManagerContract.getAddress(),
                     await c.fundsManagerContract.getAddress(),
@@ -200,7 +198,6 @@ describe("FundsManagerTests", function () {
                 contractNameOrPath: "ExpandableSupplyToken",
                 deployArgs: [
                     "ORPHAN_TOKEN",
-                    10000n * DECIMALS,
                     1000n * DECIMALS,
                     await c.contractsManagerContract.getAddress(),
                     await c.fundsManagerContract.getAddress(),
@@ -420,7 +417,6 @@ describe("FundsManagerTests", function () {
         [failTransferContract] = await deployContractAndWait({
             contractNameOrPath: "contracts/test/ERC20FailTransfer",
             deployArgs: ["PROJ_DB_ID",
-                10000n * DECIMALS,
                 1000n * DECIMALS,
                 await c.contractsManagerContract.getAddress(),
                 await c.fundsManagerContract.getAddress(),
@@ -437,7 +433,6 @@ describe("FundsManagerTests", function () {
             contractNameOrPath: "contracts/test/ERC20FailTransferFrom",
             deployArgs: [
                 "PROJ_DB_ID",
-                10000n * DECIMALS,
                 1000n * DECIMALS,
                 await c.contractsManagerContract.getAddress(),
                 await c.fundsManagerContract.getAddress(),
@@ -497,12 +492,10 @@ describe("FundsManagerTests", function () {
             .to.be.revertedWith("Sending to address(0) is forbidden");
     });
 
-    it("should fail to update balance from non-trusted address", async function () {
+    it("should fail to call restricted function from non-trusted address", async function () {
         await expect(c.fundsManagerContract.connect(c.accounts[0]).sendToken(c.pId, ethers.ZeroAddress, ethers.ZeroAddress, 100n * DECIMALS))
             .to.be.revertedWith("Restricted function");
         await expect(c.fundsManagerContract.connect(c.accounts[0]).sendEther(c.pId, ethers.ZeroAddress, 100n * DECIMALS))
-            .to.be.revertedWith("Restricted function");
-        await expect(c.fundsManagerContract.connect(c.accounts[0]).updateBalance(c.pId, ethers.ZeroAddress, 100n * DECIMALS))
             .to.be.revertedWith("Restricted function");
     });
 });

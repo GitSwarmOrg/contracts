@@ -24,7 +24,6 @@ contract UpgradableToken is ExpandableSupplyTokenBase, Initializable {
         string memory tokenName,
         string memory tokenSymbol,
         string memory prjId,
-        uint256 supply,
         uint256 creatorSupply,
         address _delegates,
         address _fundsManager,
@@ -37,7 +36,7 @@ contract UpgradableToken is ExpandableSupplyTokenBase, Initializable {
         name = tokenName;
         symbol = tokenSymbol;
         contractsManagerContract.createProject(prjId, address(this));
-        createInitialTokens(supply, creatorSupply);
+        createInitialTokens(creatorSupply);
     }
 
 }

@@ -134,7 +134,6 @@ interface Contracts {
 export async function initialDeployGsContracts(
     tokenName: string,
     tokenSymbol: string,
-    fmSupply: BigInt,
     tokenBufferAmount: BigInt,
     deployer = undefined,
 ): Promise<Contracts> {
@@ -150,7 +149,7 @@ export async function initialDeployGsContracts(
         Parameters: {args: [GITSWARM_ACCOUNT.address]},
         Proposal: {args: []},
         GasStation: {args: []},
-        UpgradableToken: {args: [tokenName, tokenSymbol, GS_PROJECT_DB_ID, fmSupply, tokenBufferAmount]},
+        UpgradableToken: {args: [tokenName, tokenSymbol, GS_PROJECT_DB_ID, tokenBufferAmount]},
         FundsManager: {args: []},
     };
 
@@ -235,7 +234,6 @@ export class TestBase {
             const contracts = await initialDeployGsContracts(
                 "GitSwarm",
                 "GS",
-                TestBase.fmSupply,
                 TestBase.tokenBufferAmount
             );
 
@@ -257,10 +255,8 @@ export class TestBase {
             assert.equal(await this.tokenContract.proposalContract(), await this.proposalContract.getAddress());
             assert.equal(await this.tokenContract.gasStationContract(), await this.gasStationContract.getAddress());
             assert.equal(await this.tokenContract.contractsManagerContract(), await this.contractsManagerContract.getAddress());
-            assert.equal((await this.tokenContract.totalSupply()).toString(), TestBase.fmSupply + TestBase.tokenBufferAmount);
+            assert.equal((await this.tokenContract.totalSupply()).toString(), TestBase.tokenBufferAmount);
             assert.equal((await this.tokenContract.balanceOf(await this.ethAccount.getAddress())), TestBase.tokenBufferAmount);
-            assert.equal((await this.tokenContract.balanceOf(await this.fundsManagerContract.getAddress())), TestBase.fmSupply);
-            assert.equal((await this.fundsManagerContract.balances(this.pId, await this.tokenContract.getAddress())), TestBase.fmSupply);
         }
     }
 
@@ -281,7 +277,6 @@ export class TestBase {
         [this.tokenContract] = await deployContractAndWait({
                 contractNameOrPath: tokenContract,
                 deployArgs: ['PROJECT_ID',
-                    TestBase.fmSupply,
                     TestBase.tokenBufferAmount,
                     await this.contractsManagerContract.getAddress(),
                     await this.fundsManagerContract.getAddress(),

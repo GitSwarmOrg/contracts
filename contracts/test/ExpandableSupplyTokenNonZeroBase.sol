@@ -9,6 +9,6 @@ contract ExpandableSupplyTokenNonZeroBase is ExpandableSupplyTokenBase {
     constructor(
     ) {
         __totalSupply = 1;
-        createInitialTokens(1, 2);
+        createInitialTokens(2);
     }
 }

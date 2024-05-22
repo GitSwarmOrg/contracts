@@ -346,17 +346,4 @@ contract FundsManager is Common, Initializable, IFundsManager {
         receiver.sendValue(amount);
         emit EthSent(projectId, receiver, amount);
     }
-
-    /**
-     * @notice Updates the balance of a specific token for a project.
-     * @dev Adds the specified amount to the project's token balance.
-     * This can account for tokens deposited in ways other than the `depositToken` function.
-     * @param projectId The ID of the project whose token balance is being updated.
-     * @param tokenAddress The address of the token whose balance is being updated.
-     * @param amount The amount by which to increase the project's balance of the token.
-     */
-    function updateBalance(uint256 projectId, address tokenAddress, uint256 amount) external restricted(projectId) {
-        balances[projectId][tokenAddress] += amount;
-        emit BalanceUpdated(projectId, tokenAddress, amount);
-    }
 }

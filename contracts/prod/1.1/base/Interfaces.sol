@@ -46,7 +46,6 @@ interface IFundsManager {
     function reclaimFunds(uint256 projectId, uint256 votingTokenAmount, address[] memory tokenContractsAddresses) external;
     function sendToken(uint256 projectId, address tokenAddress, address receiver, uint256 amount) external;
     function sendEther(uint256 projectId, address payable receiver, uint256 amount) external;
-    function updateBalance(uint256 projectId, address tokenAddress, uint256 amount) external;
     function balances(uint256 projectId, address tokenAddress) external view returns (uint256);
 }
 

@@ -19,7 +19,7 @@ contract ExpandableSupplyTokenBase is ERC20Base {
     /** @dev Emitted when a proposal is executed */
     event ExecuteProposal(uint256 projectId, uint256 proposalId);
     /** @dev Emitted when initial tokens are created */
-    event InitialTokensCreated(uint256 supply, uint256 creatorSupply);
+    event InitialTokensCreated(uint256 creatorSupply);
     /** @dev Emitted when tokens are created */
     event TokensCreated(uint256 value);
     /** @dev Emitted when creating more tokens is disabled */
@@ -32,17 +32,14 @@ contract ExpandableSupplyTokenBase is ERC20Base {
 
     /**
      * @dev Creates initial token supply. Only callable internally.
-     * @param supply Amount of tokens for the funds manager.
      * @param creatorSupply Amount of tokens for the contract creator.
      */
-    function createInitialTokens(uint256 supply, uint256 creatorSupply) internal {
+    function createInitialTokens(uint256 creatorSupply) internal {
         require(__totalSupply == 0);
         projectId = contractsManagerContract.nextProjectId() - 1;
-        __totalSupply = supply + creatorSupply;
+        __totalSupply = creatorSupply;
         __balanceOf[msg.sender] = creatorSupply;
-        __balanceOf[address(fundsManagerContract)] = supply;
-        fundsManagerContract.updateBalance(projectId, address(this), supply);
-        emit InitialTokensCreated(supply, creatorSupply);
+        emit InitialTokensCreated(creatorSupply);
     }
 
     /**
@@ -52,8 +49,9 @@ contract ExpandableSupplyTokenBase is ERC20Base {
      */
     function createTokens(uint256 value) internal returns (bool) {
         __totalSupply += value;
-        __balanceOf[address(fundsManagerContract)] += value;
-        fundsManagerContract.updateBalance(projectId, address(this), value);
+        __balanceOf[address(this)] = value;
+        __allowances[address(this)][address(fundsManagerContract)] += value;
+        fundsManagerContract.depositToken(projectId, address(this), value);
         emit TokensCreated(value);
         return true;
     }

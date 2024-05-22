@@ -7,7 +7,6 @@ contract ERC20FailTransfer is ERC20Base {
     uint immutable public projectId;
     constructor(
         string memory prjId,
-        uint supply,
         uint creatorSupply,
         address contractsManagerAddress,
         address fundsManagerContractAddress,
@@ -22,10 +21,8 @@ contract ERC20FailTransfer is ERC20Base {
         _init(address(0), fundsManagerContractAddress, parametersContractAddress, proposalContractAddress, address(0), contractsManagerAddress);
         contractsManagerContract.createProject(prjId, address(this), false);
         projectId = contractsManagerContract.nextProjectId() - 1;
-        __totalSupply = supply + creatorSupply;
+        __totalSupply = creatorSupply;
         __balanceOf[msg.sender] = creatorSupply;
-        __balanceOf[address(fundsManagerContract)] = supply;
-        fundsManagerContract.updateBalance(projectId, address(this), supply);
     }
 
 

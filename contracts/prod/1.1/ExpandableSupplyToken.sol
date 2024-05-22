@@ -18,7 +18,6 @@ import "./base/ExpandableSupplyTokenBase.sol";
 contract ExpandableSupplyToken is ExpandableSupplyTokenBase {
     /**
      * @param prjId The project ID for the new token.
-     * @param supply The total fixed supply of the token.
      * @param creatorSupply The portion of the supply allocated to the creator.
      * @param contractsManagerAddress Address of the Contracts Manager.
      * @param fundsManagerContractAddress Address of the Funds Manager Contract.
@@ -29,7 +28,6 @@ contract ExpandableSupplyToken is ExpandableSupplyTokenBase {
      */
     constructor(
         string memory prjId,
-        uint256 supply,
         uint256 creatorSupply,
         address contractsManagerAddress,
         address fundsManagerContractAddress,
@@ -42,6 +40,6 @@ contract ExpandableSupplyToken is ExpandableSupplyTokenBase {
         symbol = tokenSymbol;
         _init(address(0), fundsManagerContractAddress, parametersContractAddress, proposalContractAddress, address(0), contractsManagerAddress);
         contractsManagerContract.createProject(prjId, address(this), false);
-        createInitialTokens(supply, creatorSupply);
+        createInitialTokens(creatorSupply);
     }
 }
