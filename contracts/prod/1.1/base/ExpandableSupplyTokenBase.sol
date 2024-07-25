@@ -87,8 +87,8 @@ contract ExpandableSupplyTokenBase is ERC20Base {
         require(willExecute, "Can't execute, proposal was rejected or vote count was not locked");
         proposalContract.setWillExecute(projectId, proposalId, false);
         uint256 value = parametersContract.parameters(projectId, keccak256("RequiredVotingPowerPercentageToCreateTokens"));
-        (,, bool checkVotes) = proposalContract.checkVoteCount(projectId, proposalId, value);
         if (typeOfProposal == CREATE_TOKENS) {
+            (,, bool checkVotes) = proposalContract.checkVoteCount(projectId, proposalId, value);
             require(checkVotes, "RequiredVotingPowerPercentageToCreateTokens not met");
             uint256 amount = createTokensProposals[proposalId].amount;
             delete createTokensProposals[proposalId];

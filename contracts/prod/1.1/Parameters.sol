@@ -197,7 +197,12 @@ contract Parameters is Common, Initializable, IParameters {
             emit ChangeTrustedAddress(projectId, proposalId, p.trustedAddress, p.value);
             delete changeTrustedAddressProposals[projectId][proposalId];
         } else if (typeOfProposal == CHANGE_PARAMETER) {
-            parameters[projectId][changeParameterProposals[projectId][proposalId].parameterName] = changeParameterProposals[projectId][proposalId].value;
+            bytes32 paramName = changeParameterProposals[projectId][proposalId].parameterName;
+            if (paramName == keccak256("RequiredVotingPowerPercentageToCreateTokens")){
+                (,, bool checkVotes) = proposalContract.checkVoteCount(projectId, proposalId, parameters[projectId][paramName]);
+                require(checkVotes, "RequiredVotingPowerPercentageToCreateTokens not met");
+            }
+            parameters[projectId][paramName] = changeParameterProposals[projectId][proposalId].value;
             delete changeParameterProposals[projectId][proposalId];
         } else {
             revert('Unexpected proposal type');

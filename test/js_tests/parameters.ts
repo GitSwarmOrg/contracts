@@ -137,6 +137,39 @@ describe('Parameters', function () {
             .to.be.revertedWith("Proposal does not exist");
     });
 
+    it('should execute proposal for RequiredVotingPowerPercentageToCreateTokens when condition is met', async function () {
+        const parameterName = ethers.keccak256(ethers.toUtf8Bytes('RequiredVotingPowerPercentageToCreateTokens'));
+        const newValue = 70; // New value that meets the condition
+
+        const proposalId = await c.proposalContract.nextProposalId(c.pId);
+        await c.parametersContract.proposeParameterChange(c.pId, parameterName, newValue);
+
+        await increaseTime(TestBase.VOTE_DURATION + 5);
+        await c.processProposal(c.parametersContract, proposalId, c.pId, true);
+
+        const updatedValue = await c.parametersContract.parameters(c.pId, parameterName);
+        expect(updatedValue).to.equal(newValue);
+    });
+
+    it('should fail to execute proposal for RequiredVotingPowerPercentageToCreateTokens when condition is not met', async function () {
+        const parameterName = ethers.keccak256(ethers.toUtf8Bytes('RequiredVotingPowerPercentageToCreateTokens'));
+        const newValue = 99; // New value
+        const proposalId = await c.proposalContract.nextProposalId(c.pId);
+        await c.parametersContract.connect(c.accounts[0]).proposeParameterChange(c.pId, parameterName, newValue);
+        await c.proposalContract.connect(c.accounts[1]).vote(c.pId, proposalId, true);
+        await c.proposalContract.connect(c.accounts[2]).vote(c.pId, proposalId, false);
+
+
+        await increaseTime(TestBase.VOTE_DURATION + 5);
+
+        await expect(c.processProposal(c.parametersContract, proposalId, c.pId, true))
+            .to.be.revertedWith("RequiredVotingPowerPercentageToCreateTokens not met");
+
+        // Verify that the parameter value hasn't changed
+        const currentValue = await c.parametersContract.parameters(c.pId, parameterName);
+        expect(currentValue).to.not.equal(newValue);
+    });
+
     it('should fail if the buffer time has not ended', async function () {
         const proposalId = await c.proposalContract.nextProposalId(c.pId);
         const parameterName = ethers.keccak256(ethers.toUtf8Bytes('VoteDuration'));
