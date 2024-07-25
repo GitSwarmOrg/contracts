@@ -252,12 +252,12 @@ contract FundsManager is Common, Initializable, IFundsManager {
 
         for (uint256 i = 0; i < amount.length; i++) {
             address payable to = payable(to_address[i]);
-            emit ProposalTransfer(projectId, tokenAddress[i], to, amount[i], proposalId);
             if (to == address(0)) {
+                emit ProjectToProjectTransfer(projectId, tokenAddress[i], depositToProjectId[i], amount[i]);
                 balances[projectId][tokenAddress[i]] -= amount[i];
                 balances[depositToProjectId[i]][tokenAddress[i]] += amount[i];
-                emit ProjectToProjectTransfer(projectId, tokenAddress[i], depositToProjectId[i], amount[i]);
             } else {
+                emit ProposalTransfer(projectId, tokenAddress[i], to, amount[i], proposalId);
                 if (tokenAddress[i] == address(0)) {
                     balances[projectId][address(0)] -= amount[i];
                     if (to == address(gasStationContract)) {

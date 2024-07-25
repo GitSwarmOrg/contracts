@@ -4,7 +4,6 @@ import hre from "hardhat";
 
 const ethers = hre.ethers;
 const TOKEN_BUFFER_AMOUNT = 10n ** 20n;
-const FM_SUPPLY = 10n ** 20n;
 
 async function main() {
     const [deployer] = await ethers.getSigners();
@@ -12,7 +11,6 @@ async function main() {
     await initialDeployGsContracts(
         "GitSwarm",
         "GS",
-        FM_SUPPLY,
         TOKEN_BUFFER_AMOUNT,
         deployer
     )
