@@ -1,20 +1,21 @@
 {
   "devDependencies": {
-    "@types/chai": "4.3.14",
-    "chai": "4.4.1",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "^20.12.7",
-    "hardhat": "2.22.2",
-    "solidity-coverage": "0.8.12",
-    "ethers": "6.12.0",
+    "chai": "4.5.0",
     "@typechain/hardhat": "9.1.0",
     "@typechain/ethers-v6": "0.5.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "hardhat-deploy": "0.12.2",
-    "@nomicfoundation/hardhat-ethers": "3.0.5",
-    "@nomicfoundation/hardhat-chai-matchers": "2.0.6",
-    "@nomiclabs/hardhat-solhint": "3.0.1"
+    "@nomicfoundation/hardhat-chai-matchers": "2.0.8",
+    "@nomicfoundation/hardhat-ethers": "3.0.8",
+    "@nomiclabs/hardhat-solhint": "4.0.1",
+    "@types/chai": "5.0.0",
+    "@types/mocha": "10.0.8",
+    "@types/node": "22.7.4",
+    "ethers": "6.13.3",
+    "hardhat": "2.22.12",
+    "hardhat-deploy": "0.12.4",
+    "@openzeppelin/contracts": "5.0.2",
+    "solidity-coverage": "0.8.13",
+    "typescript": "^5.6.2"
   },
   "scripts": {
     "deploy": "npx hardhat run scripts/deploy.ts --network"

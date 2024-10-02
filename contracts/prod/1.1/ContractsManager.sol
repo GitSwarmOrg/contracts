@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 // (c) 2022+ GitSwarm
 // This code is licensed under MIT license (see LICENSE.txt for details)
-pragma solidity 0.8.20;
+pragma solidity 0.8.27;
 
 import "./base/Common.sol";
 import "./base/MyTransparentUpgradeableProxy.sol";
-import "../../openzeppelin-v5.0.1/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "../../openzeppelin-v5.0.1/proxy/transparent/ProxyAdmin.sol";
-import "../../openzeppelin-v5.0.1/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title Contracts Manager for Governance

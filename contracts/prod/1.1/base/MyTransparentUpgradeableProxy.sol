@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // (c) 2022+ GitSwarm
 // This code is licensed under MIT license (see LICENSE.txt for details)
-pragma solidity 0.8.20;
-import "../../../openzeppelin-v5.0.1/proxy/transparent/TransparentUpgradeableProxy.sol";
+pragma solidity 0.8.27;
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /**
  * @title My Transparent Upgradeable Proxy

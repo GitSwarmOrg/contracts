@@ -1,6 +1,6 @@
 Solidity contracts used on the [GitSwarm.com](https://gitswarm.com/) platform
 
-Tested using Hardhat 2.22.2 and solidity-coverage 0.8.12.
+Tested using Hardhat 2.22.12 and solidity-coverage 0.8.13.
 
 ## Notes
 

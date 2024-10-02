@@ -5,7 +5,7 @@
 __pycache__
 .idea
 /pyvenv/
-/typechain-types/
+typechain-types/
 /coverage/
 coverage.json
-/.hypothesis/unicode_data/13.0.0/charmap.json.gz
+.hypothesis/

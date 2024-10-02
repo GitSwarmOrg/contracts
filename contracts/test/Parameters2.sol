@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.27;
 
 import {Parameters} from "../prod/1.1/Parameters.sol";
 

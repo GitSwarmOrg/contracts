@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // (c) 2022+ GitSwarm
 // This code is licensed under MIT license (see LICENSE.txt for details)
-pragma solidity 0.8.20;
+pragma solidity 0.8.27;
 
 import "./base/ERC20Base.sol";
 import {FundsManager} from "./FundsManager.sol";

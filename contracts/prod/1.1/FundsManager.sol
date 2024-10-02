@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 // (c) 2022+ GitSwarm
 // This code is licensed under MIT license (see LICENSE.txt for details)
-pragma solidity 0.8.20;
+pragma solidity 0.8.27;
 
 import "./base/Common.sol";
-import "../../openzeppelin-v5.0.1/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 //import "hardhat/console.sol";
 
 /** @title FundsManager for GitSwarm Projects
