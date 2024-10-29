@@ -1,0 +1,14 @@
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/ContractsManager.sol:ContractsManager" 0xd6dc16d337800a922eC3c86F64a1f27d8CAB61a6
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/SelfAdminTransparentUpgradeableProxy.sol:SelfAdminTransparentUpgradeableProxy" 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0xd6dc16d337800a922eC3c86F64a1f27d8CAB61a6 0x
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/Delegates.sol:Delegates" 0x0f05AB1aca31a7e2BAA1fE8E8C277579aa41D7D0
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/MyTransparentUpgradeableProxy.sol:MyTransparentUpgradeableProxy" 0x5BC213380749f240373c0E7B1D6cCe74BA791b50 0x0f05AB1aca31a7e2BAA1fE8E8C277579aa41D7D0 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0x
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/FundsManager.sol:FundsManager" 0xbAebEC50bFef65bf2FBad2C3145B08396153FCB6
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/MyTransparentUpgradeableProxy.sol:MyTransparentUpgradeableProxy" 0xcE420976b417DFfE0501F6678E0e527d6456Dbd8 0xbAebEC50bFef65bf2FBad2C3145B08396153FCB6 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0x
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/Parameters.sol:Parameters" 0x40F5491002A141E7DB24edee60770344DD65Caa5
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/MyTransparentUpgradeableProxy.sol:MyTransparentUpgradeableProxy" 0x877A5Ef6e3E736D8582856FF98DF0A5a8b94DAa7 0x40F5491002A141E7DB24edee60770344DD65Caa5 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0x
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/Proposal.sol:Proposal" 0x5A644aA96637B3042E819Cf241B02291EeAb7e22
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/MyTransparentUpgradeableProxy.sol:MyTransparentUpgradeableProxy" 0xACe844aDA68b12F09a8490c5BDdE58ABe7FeDc1c 0x5A644aA96637B3042E819Cf241B02291EeAb7e22 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0x
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/GasStation.sol:GasStation" 0x5974809b7D7781B5dCAcBa77D280859DD683618f
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/MyTransparentUpgradeableProxy.sol:MyTransparentUpgradeableProxy" 0xd45588f3fa6C8D349dBaabeaC535341659F45c74 0x5974809b7D7781B5dCAcBa77D280859DD683618f 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0x
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/UpgradableToken.sol:UpgradableToken" 0x3e51A5a716Dc14386d230576DB4Ff0Dd4776337c
+npx hardhat verify --network mainnet --contract "contracts/prod/1.1/base/MyTransparentUpgradeableProxy.sol:MyTransparentUpgradeableProxy" 0xc83e401D231dFf327C1a234d897b82935EC5BdBa 0x3e51A5a716Dc14386d230576DB4Ff0Dd4776337c 0x0eE96163E9401250B7F0a7F693a7534ad88756DA 0x

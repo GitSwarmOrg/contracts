@@ -369,7 +369,7 @@ export async function sendEth(amount: string | Numeric, to: string, signer: Sign
     const tx = {
         to: to,
         value: ethers.parseUnits(amount.toString(), unit),
-        gasLimit: MANUAL_GAS_LIMIT
+        gasLimit: 21000
     };
     const transaction = await sender.sendTransaction(tx);
     await transaction.wait();

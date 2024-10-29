@@ -3,6 +3,7 @@ import {HardhatUserConfig} from "hardhat/config"
 import "hardhat-deploy"
 import "@nomiclabs/hardhat-solhint"
 import "@nomicfoundation/hardhat-ethers"
+import "@nomiclabs/hardhat-etherscan"
 import "@typechain/hardhat"
 import "@nomicfoundation/hardhat-chai-matchers"
 import "solidity-coverage"
@@ -10,7 +11,7 @@ import "solidity-coverage"
 const config: HardhatUserConfig =
     {
         solidity: {
-            version: '0.8.27',
+            version: '0.8.28',
             settings: {
                 optimizer: {
                     enabled: true,
@@ -42,16 +43,27 @@ const config: HardhatUserConfig =
             },
             localhost: {
                 url: "http://127.0.0.1:8545"
+            },
+            mainnet: {
+                url: "https://eth.gitswarm.com:2096",
+                chainId: 1
             }
         },
-        // @ts-ignore
+        etherscan: {
+            // Your API key for Etherscan
+            // Obtain one at https://etherscan.io/
+            apiKey: ''
+        },
+        sourcify: {
+            // Doesn't need an API key
+            enabled: true
+        },
         solidityCoverage: {
             measureStatementCoverage: true,
             measureFunctionCoverage: true,
             measureBranchCoverage: true,
             measureLineCoverage: true,
             sources: '/contracts/prod/1.1/',
-
         },
         mocha: {
             timeout: 300000
